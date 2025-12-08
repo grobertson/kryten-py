@@ -604,7 +604,7 @@ class KrytenClient:
         return await self._send_command(
             channel=channel,
             action="assignLeader",
-            data={"username": username},
+            data={"name": username},
             domain=domain,
         )
 
@@ -634,8 +634,8 @@ class KrytenClient:
         """
         return await self._send_command(
             channel=channel,
-            action="mute",
-            data={"username": username},
+            action="chat",
+            data={"message": f"/mute {username}"},
             domain=domain,
         )
 
@@ -667,8 +667,8 @@ class KrytenClient:
         """
         return await self._send_command(
             channel=channel,
-            action="smute",
-            data={"username": username},
+            action="chat",
+            data={"message": f"/smute {username}"},
             domain=domain,
         )
 
@@ -696,8 +696,8 @@ class KrytenClient:
         """
         return await self._send_command(
             channel=channel,
-            action="unmute",
-            data={"username": username},
+            action="chat",
+            data={"message": f"/unmute {username}"},
             domain=domain,
         )
 
@@ -1131,7 +1131,7 @@ class KrytenClient:
             action="newPoll",
             data={
                 "title": title,
-                "options": options,
+                "opts": options,
                 "obscured": obscured,
                 "timeout": timeout,
             },
@@ -1311,7 +1311,7 @@ class KrytenClient:
         return await self._send_command(
             channel=channel,
             action="unban",
-            data={"ban_id": ban_id},
+            data={"id": ban_id},
             domain=domain,
         )
 
@@ -1372,7 +1372,7 @@ class KrytenClient:
         """
         return await self._send_command(
             channel=channel,
-            action="searchLibrary",
+            action="searchMedia",
             data={"query": query, "source": source},
             domain=domain,
         )
@@ -1401,8 +1401,8 @@ class KrytenClient:
         """
         return await self._send_command(
             channel=channel,
-            action="deleteFromLibrary",
-            data={"media_id": media_id},
+            action="uncache",
+            data={"id": media_id},
             domain=domain,
         )
 
@@ -2401,6 +2401,70 @@ class KrytenClient:
         except Exception as e:
             self.logger.error(f"Error querying profiles: {e}", exc_info=True)
             return {}
+
+    async def get_user_level(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+        timeout: float = 2.0,
+    ) -> dict[str, Any]:
+        """Get bot's current user level (rank) from Kryten-Robot.
+        
+        Queries Kryten-Robot for the logged-in user's rank/permissions level.
+        Useful for checking if the bot has sufficient permissions before
+        attempting privileged operations like playlist management.
+        
+        Args:
+            channel: Channel name
+            domain: Optional domain (uses first configured if None)
+            timeout: Request timeout in seconds (default: 2.0)
+            
+        Returns:
+            Dictionary with 'success', 'rank', and 'username' keys.
+            On success: {"success": True, "rank": 2, "username": "BotName"}
+            On error: {"success": False, "error": "error message"}
+            
+        CyTube Rank Levels:
+            - 0: Guest
+            - 1: Registered User
+            - 2: Moderator (playlist access)
+            - 3+: Admin/Owner
+            
+        Example:
+            >>> result = await client.get_user_level("lounge")
+            >>> if result.get("success") and result.get("rank", 0) >= 2:
+            ...     # Bot has moderator+ access
+            ...     await client.add_media("lounge", "yt", "dQw4w9WgXcQ")
+        """
+        if not self._nats:
+            return {"success": False, "error": "Not connected to NATS"}
+        
+        # Resolve domain
+        if domain is None:
+            if not self.config.channels:
+                return {"success": False, "error": "No channels configured"}
+            domain = self.config.channels[0].domain
+        
+        # Build subject for user level query
+        subject = f"cytube.user_level.{domain.lower()}.{channel.lower()}"
+        
+        try:
+            response = await self._nats.request(
+                subject=subject,
+                payload=json.dumps({}).encode(),
+                timeout=timeout
+            )
+            
+            result = json.loads(response.data.decode("utf-8"))
+            return result
+        
+        except asyncio.TimeoutError:
+            self.logger.warning(f"User level query timed out for {domain}/{channel} (Kryten-Robot may not be running)")
+            return {"success": False, "error": "Timeout - Kryten-Robot not responding"}
+        except Exception as e:
+            self.logger.error(f"Error querying user level: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
 
     # KeyValue Store Methods
 
