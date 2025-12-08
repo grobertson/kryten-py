@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-12-08
+
+### Changed - BREAKING
+
+- **Subject Format Redesign**: Complete overhaul of NATS subject structure for robustness
+  - Changed prefix from `cytube.*` to `kryten.*` for better namespace clarity
+  - Events: `kryten.events.cytube.{channel}.{event}` (was `cytube.events.{domain}.{channel}.{event}`)
+  - Commands: `kryten.commands.cytube.{channel}.{action}` (was `cytube.commands.{domain}.{channel}.{action}`)
+  - Domain variations (cy.tube, cytu.be, Cytu.BE) all normalize to "cytube" literal
+  - Channels normalized: lowercase, dots removed, spaces to hyphens
+  - **This is case-insensitive**: "420Grindhouse" and "420grindhouse" match the same subject
+
+- **Aggressive Normalization**: New `normalize_token()` function replaces domain-specific logic
+  - Removes ALL dots from domains/channels (cy.tube → cytube)
+  - Lowercase everything
+  - Consistent matching regardless of input variations
+
+### Fixed
+
+- Eliminated case-sensitivity brittleness in NATS subjects
+- Domain dot variations no longer cause routing failures
+- Commands now reliably reach intended channels
+
+### Migration Required
+
+**Kryten-Robot must be updated** to match the new subject format. Both kryten-py and Kryten-Robot subject_builder.py files must use the same logic.
+
+## [0.3.4] - 2025-12-08
+
+### Fixed
+
+- **Command Subject Builder**: Fixed `build_command_subject()` to preserve dots in domain names (e.g., `cy.tube`)
+  - Previously sanitized domain which removed dots, breaking commands to domains with dots
+  - Now matches event subject behavior by only lowercasing domain, preserving dots
+  - Fixes issue where commands to `cy.tube` were sent to `cytube` instead
+
 ## [0.3.3] - 2025-12-06
 
 ### Added
