@@ -10,9 +10,6 @@ import logging
 from kryten import (
     KrytenClient,
     LifecycleEventPublisher,
-    get_kv_store,
-    kv_get,
-    kv_put,
 )
 
 
@@ -68,30 +65,27 @@ async def main():
         
         # ===== KeyValue Store =====
         
-        # Get or create a KV bucket
-        kv = await get_kv_store(nats_client, "example_bot_state", logger)
-        
         # Store configuration
-        await kv_put(kv, "config", {
+        await client.kv_put("example_bot_state", "config", {
             "enabled": True,
             "max_messages": 100,
             "timeout": 30
-        }, as_json=True, logger=logger)
+        }, as_json=True)
         
         # Store simple values
-        await kv_put(kv, "last_user", "Alice", logger=logger)
-        await kv_put(kv, "message_count", "42", logger=logger)
+        await client.kv_put("example_bot_state", "last_user", "Alice")
+        await client.kv_put("example_bot_state", "message_count", "42")
         
         # Retrieve values
-        config_data = await kv_get(kv, "config", parse_json=True, logger=logger)
+        config_data = await client.kv_get("example_bot_state", "config", parse_json=True)
         logger.info(f"Loaded config: {config_data}")
         
-        last_user = await kv_get(kv, "last_user", logger=logger)
+        last_user = await client.kv_get("example_bot_state", "last_user")
         if last_user:
             logger.info(f"Last user: {last_user.decode('utf-8')}")
         
         # Get with default
-        unknown = await kv_get(kv, "unknown_key", default="default_value", logger=logger)
+        unknown = await client.kv_get("example_bot_state", "unknown_key", default="default_value")
         logger.info(f"Unknown key returned: {unknown}")
         
         # ===== Event Handlers =====

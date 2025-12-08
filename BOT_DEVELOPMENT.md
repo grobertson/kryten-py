@@ -9,6 +9,7 @@ A comprehensive guide for building CyTube bots using the kryten-py library.
 - [Configuration](#configuration)
 - [Event Handling](#event-handling)
 - [Sending Commands](#sending-commands)
+- [Persistent Data Storage](#persistent-data-storage)
 - [Common Patterns](#common-patterns)
 - [Example Bots](#example-bots)
 - [Testing Your Bot](#testing-your-bot)
@@ -549,6 +550,304 @@ await client.ban_user(
 **Vote Skip**:
 ```python
 await client.voteskip(channel="lounge")
+```
+
+## Persistent Data Storage
+
+kryten-py provides built-in support for NATS JetStream KeyValue stores, allowing you to persist data across bot restarts without managing external databases or files.
+
+### KeyValue Store Methods
+
+All KV store operations are methods on `KrytenClient`:
+
+| Method | Description |
+|--------|-------------|
+| `kv_get(bucket, key, default, parse_json)` | Get value from store |
+| `kv_put(bucket, key, value, as_json)` | Store value |
+| `kv_delete(bucket, key)` | Delete key |
+| `kv_keys(bucket)` | List all keys |
+| `kv_get_all(bucket, parse_json)` | Get all key-value pairs |
+
+### Basic Usage
+
+**Store and Retrieve Data**:
+```python
+# Store a simple value
+await client.kv_put("my_bot_state", "counter", 42, as_json=True)
+
+# Retrieve it
+count = await client.kv_get("my_bot_state", "counter", default=0, parse_json=True)
+print(f"Counter: {count}")
+
+# Store complex data
+config = {"enabled": True, "max_users": 100}
+await client.kv_put("my_bot_state", "config", config, as_json=True)
+
+# Retrieve complex data
+config = await client.kv_get("my_bot_state", "config", parse_json=True)
+```
+
+**List All Keys**:
+```python
+keys = await client.kv_keys("my_bot_state")
+print(f"Found {len(keys)} keys: {keys}")
+```
+
+**Get All Data**:
+```python
+all_data = await client.kv_get_all("my_bot_state", parse_json=True)
+for key, value in all_data.items():
+    print(f"{key}: {value}")
+```
+
+**Delete Data**:
+```python
+await client.kv_delete("my_bot_state", "old_key")
+```
+
+### Complete Example: Message Counter Bot
+
+This bot tracks message counts per user, persisting data across restarts:
+
+```python
+import asyncio
+import logging
+from kryten import KrytenClient, ChatMessageEvent
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("counter_bot")
+
+async def main():
+    config = {
+        "nats": {"servers": ["nats://localhost:4222"]},
+        "channels": [{"domain": "cytu.be", "channel": "lounge"}]
+    }
+    
+    async with KrytenClient(config, logger=logger) as client:
+        # Load existing counts on startup
+        counts = await client.kv_get_all("message_counts", parse_json=True)
+        logger.info(f"Loaded {len(counts)} user message counts from KV store")
+        
+        @client.on("chatmsg")
+        async def handle_chat(event: ChatMessageEvent):
+            username = event.username
+            
+            # Get current count for this user
+            current_count = await client.kv_get(
+                "message_counts",
+                f"user:{username}", 
+                default=0, 
+                parse_json=True
+            )
+            
+            # Increment count
+            new_count = current_count + 1
+            
+            # Save back to KV store
+            await client.kv_put(
+                "message_counts",
+                f"user:{username}",
+                new_count,
+                as_json=True
+            )
+            
+            logger.info(f"{username} has sent {new_count} messages")
+            
+            # Respond to !stats command
+            if event.message == "!stats":
+                await client.send_chat(
+                    event.channel,
+                    f"{username}: You've sent {new_count} messages!",
+                    domain=event.domain
+                )
+            
+            # Respond to !leaderboard command
+            elif event.message == "!leaderboard":
+                all_counts = await client.kv_get_all(
+                    "message_counts", 
+                    parse_json=True
+                )
+                
+                # Sort by count descending
+                sorted_users = sorted(
+                    all_counts.items(),
+                    key=lambda x: x[1] if isinstance(x[1], int) else 0,
+                    reverse=True
+                )[:5]
+                
+                if sorted_users:
+                    leaderboard = "Top 5 chatters: " + ", ".join(
+                        f"{user.replace('user:', '')}: {count}" 
+                        for user, count in sorted_users
+                    )
+                else:
+                    leaderboard = "No messages counted yet!"
+                
+                await client.send_chat(
+                    event.channel,
+                    leaderboard,
+                    domain=event.domain
+                )
+        
+        logger.info("Counter bot started. Commands: !stats, !leaderboard")
+        await client.run()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Key Features
+
+**Automatic Persistence**: Data is stored in NATS JetStream, surviving bot restarts.
+
+**No External Database**: Uses the same NATS infrastructure your bot is already connected to.
+
+**JSON Support**: Automatically serialize/deserialize complex data structures.
+
+**Namespacing**: Use bucket names to separate different types of data:
+- `"message_counts"` - User message statistics
+- `"my_bot_config"` - Bot configuration
+- `"user_preferences"` - Per-user settings
+
+**Key Patterns**: Use prefixes to organize data within buckets:
+```python
+# User data
+await client.kv_put("bot_data", "user:alice", {...})
+await client.kv_put("bot_data", "user:bob", {...})
+
+# Configuration
+await client.kv_put("bot_data", "config:general", {...})
+await client.kv_put("bot_data", "config:channels", {...})
+```
+
+### Best Practices
+
+**1. Use Descriptive Bucket Names**:
+```python
+# Good
+await client.kv_put("cytube_lounge_stats", key, value)
+
+# Avoid
+await client.kv_put("data", key, value)
+```
+
+**2. Handle Missing Keys Gracefully**:
+```python
+# Always provide defaults
+count = await client.kv_get(
+    "stats", 
+    "counter", 
+    default=0,  # Returns 0 if key doesn't exist
+    parse_json=True
+)
+```
+
+**3. Use JSON for Complex Data**:
+```python
+# Store complex objects
+user_data = {
+    "username": "Alice",
+    "join_date": "2025-12-08",
+    "points": 150
+}
+await client.kv_put("users", "alice", user_data, as_json=True)
+
+# Retrieve
+user = await client.kv_get("users", "alice", parse_json=True)
+```
+
+**4. Batch Operations for Performance**:
+```python
+# Instead of multiple get calls
+all_users = await client.kv_get_all("users", parse_json=True)
+for username, data in all_users.items():
+    # Process each user
+    pass
+```
+
+**5. Clean Up Old Data**:
+```python
+# Remove stale entries
+keys = await client.kv_keys("temp_data")
+for key in keys:
+    if should_delete(key):
+        await client.kv_delete("temp_data", key)
+```
+
+### Common Use Cases
+
+**User Preferences**:
+```python
+@client.on("chatmsg")
+async def handle_preferences(event: ChatMessageEvent):
+    if event.message.startswith("!setcolor "):
+        color = event.message.split()[1]
+        await client.kv_put(
+            "user_prefs",
+            f"color:{event.username}",
+            color
+        )
+        await client.send_chat(event.channel, f"Color set to {color}")
+    
+    elif event.message == "!getcolor":
+        color = await client.kv_get(
+            "user_prefs",
+            f"color:{event.username}",
+            default="blue"
+        )
+        await client.send_chat(event.channel, f"Your color is {color}")
+```
+
+**Points System**:
+```python
+@client.on("chatmsg")
+async def points_system(event: ChatMessageEvent):
+    # Award 1 point per message
+    points = await client.kv_get(
+        "points",
+        event.username,
+        default=0,
+        parse_json=True
+    )
+    
+    points += 1
+    
+    await client.kv_put(
+        "points",
+        event.username,
+        points,
+        as_json=True
+    )
+    
+    if event.message == "!points":
+        await client.send_chat(
+            event.channel,
+            f"{event.username} has {points} points"
+        )
+```
+
+**Configuration Management**:
+```python
+# Load config on startup
+config = await client.kv_get(
+    "bot_config",
+    "settings",
+    default={"enabled": True, "max_messages": 100},
+    parse_json=True
+)
+
+# Update config via command
+@client.on("chatmsg")
+async def update_config(event: ChatMessageEvent):
+    if event.message.startswith("!setmax "):
+        max_val = int(event.message.split()[1])
+        config["max_messages"] = max_val
+        await client.kv_put(
+            "bot_config",
+            "settings",
+            config,
+            as_json=True
+        )
 ```
 
 ## Common Patterns
@@ -1253,7 +1552,34 @@ async def main():
 
 ### 4. State Management
 
-Persist state between restarts:
+Use NATS KeyValue stores for persistent state (recommended):
+
+```python
+@client.on("chatmsg")
+async def track_state(event: ChatMessageEvent):
+    # Load state
+    state = await client.kv_get(
+        "bot_state",
+        "data",
+        default={"counter": 0, "users": []},
+        parse_json=True
+    )
+    
+    # Update state
+    state["counter"] += 1
+    if event.username not in state["users"]:
+        state["users"].append(event.username)
+    
+    # Save state
+    await client.kv_put(
+        "bot_state",
+        "data",
+        state,
+        as_json=True
+    )
+```
+
+For simple bots, you can also use JSON files:
 
 ```python
 import json
@@ -1280,6 +1606,8 @@ async def save_periodically():
         await asyncio.sleep(300)  # Every 5 minutes
         save_state(state)
 ```
+
+**Note**: KeyValue stores are preferred for production as they provide automatic persistence, replication, and don't require file system access.
 
 ### 5. Monitoring
 
