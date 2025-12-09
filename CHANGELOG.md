@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.5] - 2025-12-09
+
+### Fixed
+
+- **Documentation**: Added missing moderation methods to README API reference
+  - `mute_user()` - Mute user from chatting (rank 2+)
+  - `shadow_mute_user()` - Shadow mute user (only mods see messages, rank 2+)
+  - `unmute_user()` - Remove mute/shadow mute (rank 2+)
+  - `assign_leader()` - Give/remove leader status (rank 2+)
+  - `play_next()` - Skip to next video immediately (rank 2+)
+  - These methods have always been functional, just undocumented in the main README
+
+## [0.5.4] - 2025-12-09
+
+### Fixed
+
+- **Documentation**: Removed anti-pattern of importing `nats` directly in README examples
+  - All Lifecycle Events examples now use `client._nats` instead of `import nats`
+  - All KeyValue Store examples now use `client.kv_*` methods instead of standalone helpers
+  - Monitoring examples updated to use KrytenClient context
+  - Users should never import `nats` directly - always use KrytenClient's built-in methods
+
 ## [0.4.0] - 2025-12-08
 
 ### Changed - BREAKING

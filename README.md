@@ -173,6 +173,13 @@ await client.seek("lounge", 30.0)
 # Moderation
 await client.kick_user("lounge", "spammer", reason="Spam")
 await client.ban_user("lounge", "troll")
+await client.mute_user("lounge", "noisy_user")
+await client.shadow_mute_user("lounge", "subtle_troll")
+await client.unmute_user("lounge", "reformed_user")
+
+# Advanced moderation
+await client.assign_leader("lounge", "trusted_dj")
+await client.play_next("lounge")  # Skip to next video
 ```
 
 ### Health Monitoring
@@ -202,34 +209,36 @@ The `LifecycleEventPublisher` helps coordinate service lifecycle across your mic
 ### Basic Usage
 
 ```python
-from kryten import LifecycleEventPublisher
-import nats
+from kryten import KrytenClient, LifecycleEventPublisher
 
 async def main():
-    # Connect to NATS
-    nc = await nats.connect("nats://localhost:4222")
+    config = {
+        "nats": {"servers": ["nats://localhost:4222"]},
+        "channels": [{"domain": "cytu.be", "channel": "lounge"}]
+    }
     
-    # Create lifecycle publisher
-    lifecycle = LifecycleEventPublisher(
-        nc=nc,
-        service_name="my-bot",
-        service_version="1.0.0"
-    )
-    
-    # Start lifecycle management
-    await lifecycle.start()
-    
-    try:
-        # Publish startup event
-        await lifecycle.publish_startup()
+    async with KrytenClient(config) as client:
+        # Create lifecycle publisher using client's NATS connection
+        lifecycle = LifecycleEventPublisher(
+            nats_client=client._nats,
+            service_name="my-bot",
+            service_version="1.0.0"
+        )
         
-        # Your service logic here...
+        # Start lifecycle management
+        await lifecycle.start()
         
-    finally:
-        # Publish shutdown and stop
-        await lifecycle.publish_shutdown()
-        await lifecycle.stop()
-        await nc.close()
+        try:
+            # Publish startup event
+            await lifecycle.publish_startup()
+            
+            # Your service logic here...
+            await client.run()
+            
+        finally:
+            # Publish shutdown and stop
+            await lifecycle.publish_shutdown()
+            await lifecycle.stop()
 ```
 
 ### Lifecycle Events
@@ -286,18 +295,28 @@ await lifecycle.publish_group_restart(
 Other services can subscribe to lifecycle events:
 
 ```python
-async def monitor_services(nc: nats.NATS):
-    async def lifecycle_handler(msg):
-        event = json.loads(msg.data.decode())
-        service = event["service_name"]
-        event_type = event["event_type"]
-        
-        print(f"{service}: {event_type}")
-        print(f"  Uptime: {event.get('uptime_seconds', 0)}s")
-        print(f"  Hostname: {event['hostname']}")
+import json
+from kryten import KrytenClient
+
+async def monitor_services():
+    config = {
+        "nats": {"servers": ["nats://localhost:4222"]},
+        "channels": [{"domain": "cytu.be", "channel": "lounge"}]
+    }
     
-    # Subscribe to all lifecycle events
-    await nc.subscribe("kryten.lifecycle.>", cb=lifecycle_handler)
+    async with KrytenClient(config) as client:
+        async def lifecycle_handler(msg):
+            event = json.loads(msg.data.decode())
+            service = event["service_name"]
+            event_type = event["event_type"]
+            
+            print(f"{service}: {event_type}")
+            print(f"  Uptime: {event.get('uptime_seconds', 0)}s")
+            print(f"  Hostname: {event['hostname']}")
+        
+        # Subscribe to all lifecycle events using client's NATS connection
+        await client._nats.subscribe("kryten.lifecycle.>", cb=lifecycle_handler)
+        await client.run()
 ```
 
 ## KeyValue Store
@@ -307,27 +326,29 @@ The KV store helpers provide a simple interface to NATS JetStream KeyValue store
 ### Basic Operations
 
 ```python
-from kryten import get_kv_store, kv_get, kv_put, kv_delete
-import nats
+from kryten import KrytenClient
 
 async def main():
-    nc = await nats.connect("nats://localhost:4222")
+    config = {
+        "nats": {"servers": ["nats://localhost:4222"]},
+        "channels": [{"domain": "cytu.be", "channel": "lounge"}]
+    }
     
-    # Get or create a KV store bucket
-    kv = await get_kv_store(nc, "my-service-state")
-    
-    # Store simple values
-    await kv_put(kv, "counter", 42)
-    await kv_put(kv, "status", "running")
-    
-    # Retrieve values
-    counter = await kv_get(kv, "counter", default=0)  # Returns 42
-    status = await kv_get(kv, "status", default="unknown")  # Returns "running"
-    
-    # Delete values
-    await kv_delete(kv, "counter")
-    
-    await nc.close()
+    async with KrytenClient(config) as client:
+        # Store simple values
+        await client.kv_put("my-service-state", "counter", 42, as_json=True)
+        await client.kv_put("my-service-state", "status", "running")
+        
+        # Retrieve values
+        counter = await client.kv_get("my-service-state", "counter", default=0, parse_json=True)  # Returns 42
+        status_bytes = await client.kv_get("my-service-state", "status", default=b"unknown")
+        status = status_bytes.decode() if isinstance(status_bytes, bytes) else status_bytes  # "running"
+        
+        # Delete values
+        await client.kv_delete("my-service-state", "counter")
+        
+        # Your bot logic here...
+        await client.run()
 ```
 
 ### JSON Serialization
@@ -343,10 +364,10 @@ user_data = {
     "badges": ["verified", "moderator"]
 }
 
-await kv_put(kv, "user:alice", user_data, json_encode=True)
+await client.kv_put("my-service-state", "user:alice", user_data, as_json=True)
 
 # Retrieve and parse JSON
-user = await kv_get(kv, "user:alice", json_decode=True, default={})
+user = await client.kv_get("my-service-state", "user:alice", parse_json=True, default={})
 print(user["username"])  # "alice"
 print(user["badges"])    # ["verified", "moderator"]
 ```
@@ -354,14 +375,12 @@ print(user["badges"])    # ["verified", "moderator"]
 ### Bulk Operations
 
 ```python
-from kryten import kv_keys, kv_get_all
-
 # List all keys
-all_keys = await kv_keys(kv)
+all_keys = await client.kv_keys("my-service-state")
 print(f"Found {len(all_keys)} keys")
 
 # Get all key-value pairs
-all_data = await kv_get_all(kv, json_decode=True)
+all_data = await client.kv_get_all("my-service-state", parse_json=True)
 for key, value in all_data.items():
     print(f"{key}: {value}")
 ```
@@ -369,46 +388,44 @@ for key, value in all_data.items():
 ### Practical Example: State Persistence
 
 ```python
-from kryten import KrytenClient, LifecycleEventPublisher, get_kv_store, kv_get, kv_put
-import nats
+from kryten import KrytenClient, LifecycleEventPublisher
 
 async def main():
-    # Setup
-    nc = await nats.connect("nats://localhost:4222")
-    kv = await get_kv_store(nc, "bot-state")
-    
     config = {
         "nats": {"servers": ["nats://localhost:4222"]},
         "channels": [{"domain": "cytu.be", "channel": "lounge"}]
     }
     
-    client = KrytenClient(config)
-    lifecycle = LifecycleEventPublisher(nc, "echo-bot", "1.0.0")
-    
-    # Load state from KV store
-    message_count = await kv_get(kv, "message_count", default=0)
-    
-    await lifecycle.start()
-    await lifecycle.publish_startup()
-    
-    @client.on("chatmsg")
-    async def handle_chat(event):
-        nonlocal message_count
-        message_count += 1
+    async with KrytenClient(config) as client:
+        # Create lifecycle publisher
+        lifecycle = LifecycleEventPublisher(
+            nats_client=client._nats,
+            service_name="echo-bot",
+            service_version="1.0.0"
+        )
         
-        # Persist state every 10 messages
-        if message_count % 10 == 0:
-            await kv_put(kv, "message_count", message_count)
-    
-    try:
-        async with client:
+        # Load state from KV store
+        message_count = await client.kv_get("bot-state", "message_count", default=0, parse_json=True)
+        
+        await lifecycle.start()
+        await lifecycle.publish_startup()
+        
+        @client.on("chatmsg")
+        async def handle_chat(event):
+            nonlocal message_count
+            message_count += 1
+            
+            # Persist state every 10 messages
+            if message_count % 10 == 0:
+                await client.kv_put("bot-state", "message_count", message_count, as_json=True)
+        
+        try:
             await client.run()
-    finally:
-        # Save final state
-        await kv_put(kv, "message_count", message_count)
-        await lifecycle.publish_shutdown()
-        await lifecycle.stop()
-        await nc.close()
+        finally:
+            # Save final state
+            await client.kv_put("bot-state", "message_count", message_count, as_json=True)
+            await lifecycle.publish_shutdown()
+            await lifecycle.stop()
 
 if __name__ == "__main__":
     import asyncio
@@ -571,7 +588,12 @@ Main client class for interacting with CyTube via NATS.
 - `seek(channel, time_seconds, domain=None)` - Seek to time
 - `kick_user(channel, username, reason=None, domain=None)` - Kick user
 - `ban_user(channel, username, reason=None, domain=None)` - Ban user
+- `mute_user(channel, username, domain=None)` - Mute user from chatting
+- `shadow_mute_user(channel, username, domain=None)` - Shadow mute user (only mods see messages)
+- `unmute_user(channel, username, domain=None)` - Remove mute/shadow mute
 - `voteskip(channel, domain=None)` - Vote to skip media
+- `assign_leader(channel, username, domain=None)` - Give/remove leader status
+- `play_next(channel, domain=None)` - Skip to next video immediately
 
 **Properties:**
 - `is_connected` - Check if connected to NATS
