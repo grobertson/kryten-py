@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2025-12-09
+
+### Changed
+
+- **Compatibility**: Lowered minimum Python version requirement from 3.11 to 3.10
+  - No Python 3.11+ specific features are used in the codebase
+  - Dependencies (pydantic ≥3.9, nats-py ≥3.7) support Python 3.10
+  - Updated tooling configuration (black, ruff, mypy) to target Python 3.10
+
 ## [0.5.5] - 2025-12-09
 
 ### Fixed
