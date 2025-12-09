@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.8] - 2025-12-09
+
+### Added
+
+- **Channel Discovery**: Added `get_channels()` method to KrytenClient
+  - Queries `kryten.robot.command` with `system.channels` to discover available channels
+  - Returns list of channel info dictionaries (domain, channel, connected status)
+  - Enables automatic channel discovery for CLI tools and applications
+  - Supports future multi-channel deployments
+
 ## [0.5.7] - 2025-12-09
 
 ### Changed

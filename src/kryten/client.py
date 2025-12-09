@@ -2703,6 +2703,49 @@ class KrytenClient:
             return json.loads(response.data.decode('utf-8'))
         except asyncio.TimeoutError as e:
             raise TimeoutError(f"NATS request timeout on {subject}") from e
+    
+    async def get_channels(self, timeout: float = 5.0) -> list[dict[str, Any]]:
+        """Discover available channels from connected Kryten-Robot instances.
+        
+        Queries kryten.robot.command with system.channels command to get a list
+        of channels that robot instances are connected to.
+        
+        Args:
+            timeout: Timeout in seconds for the request
+            
+        Returns:
+            List of channel dictionaries, each containing:
+                - domain (str): CyTube domain
+                - channel (str): Channel name
+                - connected (bool): Connection status
+            
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response format is invalid
+            
+        Example:
+            >>> channels = await client.get_channels()
+            >>> for ch in channels:
+            ...     print(f"{ch['domain']}/{ch['channel']}")
+        """
+        request = {
+            "service": "robot",
+            "command": "system.channels"
+        }
+        
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get channels: {error}")
+        
+        channels = response.get("data", {}).get("channels", [])
+        
+        if not isinstance(channels, list):
+            raise ValueError("Invalid response format: expected list of channels")
+        
+        return channels
 
 
 __all__ = ["KrytenClient"]
