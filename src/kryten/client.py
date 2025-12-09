@@ -2746,6 +2746,51 @@ class KrytenClient:
             raise ValueError("Invalid response format: expected list of channels")
         
         return channels
+    
+    async def get_version(self, timeout: float = 5.0) -> str:
+        """Get Kryten-Robot version from connected instance.
+        
+        Queries kryten.robot.command with system.version command to get the
+        version string of the running robot instance. Useful for checking
+        compatibility and enforcing minimum version requirements.
+        
+        Args:
+            timeout: Timeout in seconds for the request
+            
+        Returns:
+            Semantic version string (e.g., "0.5.4")
+            
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response format is invalid
+            
+        Example:
+            >>> version = await client.get_version()
+            >>> print(f"Kryten-Robot version: {version}")
+            >>> 
+            >>> # Check minimum version
+            >>> from packaging import version as pkg_version
+            >>> if pkg_version.parse(version) < pkg_version.parse("0.5.0"):
+            ...     raise RuntimeError("Requires Kryten-Robot >= 0.5.0")
+        """
+        request = {
+            "service": "robot",
+            "command": "system.version"
+        }
+        
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get version: {error}")
+        
+        version = response.get("data", {}).get("version")
+        
+        if not isinstance(version, str):
+            raise ValueError("Invalid response format: expected version string")
+        
+        return version
 
 
 __all__ = ["KrytenClient"]
