@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7] - 2025-12-09
+
+### Changed
+
+- Version bump to trigger PyPI release after v0.5.6 release process issue
+- All changes from v0.5.6 included (Python 3.10 support)
+
 ## [0.5.6] - 2025-12-09
 
 ### Changed
