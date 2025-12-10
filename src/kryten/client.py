@@ -2791,6 +2791,289 @@ class KrytenClient:
             raise ValueError("Invalid response format: expected version string")
         
         return version
+    
+    async def get_stats(self, timeout: float = 5.0) -> dict[str, Any]:
+        """Get comprehensive runtime statistics from Kryten-Robot.
+        
+        Queries kryten.robot.command with system.stats command to retrieve
+        detailed runtime metrics including uptime, event rates, command stats,
+        connection details, state counts, and memory usage.
+        
+        Args:
+            timeout: Timeout in seconds for the request
+            
+        Returns:
+            Dictionary containing runtime statistics with keys:
+                - uptime (float): Seconds since application started
+                - events (dict): Event publisher statistics
+                    - total_published (int): Total events published
+                    - rate_1min (float): Events/second over last minute
+                    - rate_5min (float): Events/second over last 5 minutes
+                    - last_event_time (str): ISO8601 timestamp of last event
+                    - last_event_type (str): Type of last event
+                - commands (dict): Command subscriber statistics
+                    - total_received (int): Total commands received
+                    - succeeded (int): Successfully processed commands
+                    - failed (int): Failed commands
+                    - rate_1min (float): Commands/second over last minute
+                    - rate_5min (float): Commands/second over last 5 minutes
+                - connections (dict): Connection details
+                    - cytube (dict): CyTube connection info
+                    - nats (dict): NATS connection info
+                - state (dict): Channel state counts
+                    - users (int): Current user count
+                    - playlist (int): Playlist item count
+                    - emotes (int): Emote count
+                - memory (dict): Memory usage (if psutil available)
+                    - rss_mb (float): Resident Set Size in MB
+                    - vms_mb (float): Virtual Memory Size in MB
+            
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response format is invalid
+            
+        Example:
+            >>> stats = await client.get_stats()
+            >>> print(f"Uptime: {stats['uptime'] / 3600:.1f} hours")
+            >>> print(f"Events published: {stats['events']['total_published']}")
+            >>> print(f"Event rate: {stats['events']['rate_1min']:.2f}/sec")
+            >>> print(f"Memory usage: {stats['memory']['rss_mb']:.1f} MB")
+        """
+        request = {
+            "service": "robot",
+            "command": "system.stats"
+        }
+        
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get stats: {error}")
+        
+        stats = response.get("data", {})
+        
+        if not isinstance(stats, dict):
+            raise ValueError("Invalid response format: expected stats dictionary")
+        
+        return stats
+    
+    async def get_config(self, timeout: float = 5.0) -> dict[str, Any]:
+        """Get current configuration from Kryten-Robot (passwords redacted).
+        
+        Queries kryten.robot.command with system.config command to retrieve
+        the running configuration with sensitive values (passwords, tokens)
+        automatically redacted.
+        
+        Args:
+            timeout: Timeout in seconds for the request
+            
+        Returns:
+            Dictionary containing configuration with keys matching KrytenConfig
+            structure (cytube, nats, commands, health, state_counting, logging).
+            All password and token fields will be replaced with "***REDACTED***".
+            
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response format is invalid
+            
+        Example:
+            >>> config = await client.get_config()
+            >>> print(f"Channel: {config['cytube']['channel']}")
+            >>> print(f"Domain: {config['cytube']['domain']}")
+            >>> print(f"Log level: {config['log_level']}")
+            >>> # Passwords are automatically redacted:
+            >>> print(config['nats']['password'])  # "***REDACTED***"
+        """
+        request = {
+            "service": "robot",
+            "command": "system.config"
+        }
+        
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get config: {error}")
+        
+        config = response.get("data", {})
+        
+        if not isinstance(config, dict):
+            raise ValueError("Invalid response format: expected config dictionary")
+        
+        return config
+    
+    async def ping(self, timeout: float = 2.0) -> dict[str, Any]:
+        """Perform lightweight alive check on Kryten-Robot.
+        
+        Queries kryten.robot.command with system.ping command for a fast
+        health check that confirms the robot is running and responsive.
+        Uses shorter default timeout since this should be very fast.
+        
+        Args:
+            timeout: Timeout in seconds for the request (default 2s)
+            
+        Returns:
+            Dictionary with keys:
+                - status (str): Always "alive"
+                - timestamp (str): ISO8601 timestamp of response
+            
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout (robot likely down)
+            ValueError: If response format is invalid
+            
+        Example:
+            >>> try:
+            ...     result = await client.ping()
+            ...     print(f"Robot is alive at {result['timestamp']}")
+            ... except TimeoutError:
+            ...     print("Robot is not responding")
+        """
+        request = {
+            "service": "robot",
+            "command": "system.ping"
+        }
+        
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to ping: {error}")
+        
+        ping_result = response.get("data", {})
+        
+        if not isinstance(ping_result, dict):
+            raise ValueError("Invalid response format: expected ping result dictionary")
+        
+        return ping_result
+    
+    async def reload_config(
+        self,
+        config_path: str | None = None,
+        timeout: float = 5.0
+    ) -> dict[str, Any]:
+        """Reload configuration on Kryten-Robot.
+        
+        Queries kryten.robot.command with system.reload command to trigger
+        a configuration reload. Only "safe" changes are applied (log_level,
+        NATS credentials). Unsafe changes (CyTube domain/channel) require
+        a restart.
+        
+        Args:
+            config_path: Optional path to config file (uses current if None)
+            timeout: Timeout in seconds for the request
+            
+        Returns:
+            Dictionary with keys:
+                - success (bool): Whether reload succeeded
+                - message (str): Human-readable result message
+                - changes_applied (list[str]): List of settings that changed
+                - unsafe_changes (list[str]): List of settings requiring restart
+                - errors (list[str]): Any errors encountered
+            
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response format is invalid or reload failed
+            
+        Example:
+            >>> # Reload current config
+            >>> result = await client.reload_config()
+            >>> if result['changes_applied']:
+            ...     print(f"Applied changes: {result['changes_applied']}")
+            >>> if result['unsafe_changes']:
+            ...     print(f"Restart required for: {result['unsafe_changes']}")
+            >>> 
+            >>> # Reload from specific file
+            >>> result = await client.reload_config("/path/to/config.json")
+        """
+        request = {
+            "service": "robot",
+            "command": "system.reload"
+        }
+        
+        if config_path:
+            request["config_path"] = config_path
+        
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to reload config: {error}")
+        
+        reload_result = response.get("data", {})
+        
+        if not isinstance(reload_result, dict):
+            raise ValueError("Invalid response format: expected reload result dictionary")
+        
+        return reload_result
+    
+    async def shutdown(
+        self,
+        delay_seconds: int = 0,
+        reason: str = "Remote shutdown via client",
+        timeout: float = 5.0
+    ) -> dict[str, Any]:
+        """Initiate graceful shutdown of Kryten-Robot.
+        
+        Queries kryten.robot.command with system.shutdown command to trigger
+        a graceful shutdown after an optional delay. The robot will cleanly
+        disconnect from CyTube and NATS, save state, and exit.
+        
+        Args:
+            delay_seconds: Seconds to wait before shutdown (0-300)
+            reason: Human-readable reason for shutdown (for logging)
+            timeout: Timeout in seconds for the request
+            
+        Returns:
+            Dictionary with keys:
+                - success (bool): Whether shutdown was initiated
+                - message (str): Human-readable confirmation
+                - delay_seconds (int): Actual delay applied
+                - shutdown_time (str): ISO8601 timestamp when shutdown will occur
+                - reason (str): Reason logged
+            
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If delay is invalid or shutdown failed
+            
+        Example:
+            >>> # Immediate shutdown
+            >>> result = await client.shutdown(reason="Maintenance")
+            >>> print(f"Shutdown initiated: {result['message']}")
+            >>> 
+            >>> # Delayed shutdown (30 seconds)
+            >>> result = await client.shutdown(
+            ...     delay_seconds=30,
+            ...     reason="Scheduled maintenance"
+            ... )
+            >>> print(f"Shutdown at {result['shutdown_time']}")
+        """
+        if not isinstance(delay_seconds, int) or delay_seconds < 0 or delay_seconds > 300:
+            raise ValueError("delay_seconds must be an integer between 0 and 300")
+        
+        request = {
+            "service": "robot",
+            "command": "system.shutdown",
+            "delay_seconds": delay_seconds,
+            "reason": reason
+        }
+        
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to shutdown: {error}")
+        
+        shutdown_result = response.get("data", {})
+        
+        if not isinstance(shutdown_result, dict):
+            raise ValueError("Invalid response format: expected shutdown result dictionary")
+        
+        return shutdown_result
 
 
 __all__ = ["KrytenClient"]
