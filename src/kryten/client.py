@@ -2804,7 +2804,7 @@ class KrytenClient:
             
         Returns:
             Dictionary containing runtime statistics with keys:
-                - uptime (float): Seconds since application started
+                - uptime_seconds (float): Seconds since application started
                 - events (dict): Event publisher statistics
                     - total_published (int): Total events published
                     - rate_1min (float): Events/second over last minute
@@ -2916,8 +2916,11 @@ class KrytenClient:
             
         Returns:
             Dictionary with keys:
-                - status (str): Always "alive"
+                - pong (bool): Always True
                 - timestamp (str): ISO8601 timestamp of response
+                - uptime_seconds (float): Seconds since robot started
+                - service (str): Service name ("robot")
+                - version (str): Kryten-Robot version
             
         Raises:
             KrytenConnectionError: If not connected to NATS
@@ -2969,8 +2972,7 @@ class KrytenClient:
             Dictionary with keys:
                 - success (bool): Whether reload succeeded
                 - message (str): Human-readable result message
-                - changes_applied (list[str]): List of settings that changed
-                - unsafe_changes (list[str]): List of settings requiring restart
+                - changes (dict): Dict of changes (key: "old -> new")
                 - errors (list[str]): Any errors encountered
             
         Raises:
