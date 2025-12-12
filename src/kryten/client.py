@@ -2099,7 +2099,7 @@ class KrytenClient:
             # Find matching handlers
             event_name = raw_event.event_name.lower()
             handlers = self._handlers.get(event_name, [])
-            
+
             # Debug logging
             self.logger.debug(
                 f"Received NATS message: {event_name} from {raw_event.domain}/{raw_event.channel}, "
@@ -2109,19 +2109,32 @@ class KrytenClient:
             # Invoke handlers concurrently
             tasks = []
             for handler, channel_filter, domain_filter in handlers:
+                self.logger.debug(
+                    f"Checking handler {handler.__name__}: channel_filter={channel_filter}, "
+                    f"domain_filter={domain_filter}, event.channel={raw_event.channel}, "
+                    f"event.domain={raw_event.domain}"
+                )
                 # Check filters
                 if channel_filter and channel_filter != raw_event.channel:
+                    self.logger.debug(f"Handler filtered out by channel: {channel_filter} != {raw_event.channel}")
                     continue
                 if domain_filter and domain_filter != raw_event.domain:
+                    self.logger.debug(f"Handler filtered out by domain: {domain_filter} != {raw_event.domain}")
                     continue
 
                 # Create task for handler
+                self.logger.debug(f"Creating task for handler: {handler.__name__}")
                 task = asyncio.create_task(self._invoke_handler(handler, raw_event))
                 tasks.append(task)
 
             # Wait for all handlers
+            self.logger.debug(f"Waiting for {len(tasks)} handler tasks")
             if tasks:
-                await asyncio.gather(*tasks, return_exceptions=True)
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                # Log any exceptions from gather
+                for i, result in enumerate(results):
+                    if isinstance(result, Exception):
+                        self.logger.error(f"Handler task {i} raised: {result}", exc_info=result)
 
             # Track latency
             elapsed = time.time() - start_time

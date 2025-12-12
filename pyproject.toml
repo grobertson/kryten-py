@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "kryten-py"
-version = "0.8.1"
+version = "0.9.0"
 description = "Python library for building CyTube microservices via Kryten bridge and NATS"
 authors = ["Development Team"]
 readme = "README.md"
