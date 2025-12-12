@@ -1,7 +1,7 @@
 """Event and data models for kryten-py library."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -19,7 +19,7 @@ class RawEvent(BaseModel):
         payload: Raw Socket.IO event data as dictionary
         channel: CyTube channel name
         domain: CyTube server domain (e.g., "cytu.be")
-        timestamp: UTC ISO 8601 timestamp with microseconds
+        timestamp: timezone.utc ISO 8601 timestamp with microseconds
         correlation_id: UUID4 for distributed tracing
 
     Examples:
@@ -37,8 +37,8 @@ class RawEvent(BaseModel):
     channel: str = Field(..., description="Channel name")
     domain: str = Field(..., description="CyTube domain")
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(UTC),
-        description="UTC timestamp",
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="timezone.utc timestamp",
     )
     correlation_id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
