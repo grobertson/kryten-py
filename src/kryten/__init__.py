@@ -41,6 +41,7 @@ from kryten.kv_store import (
     kv_put,
 )
 from kryten.lifecycle_events import LifecycleEventPublisher
+from kryten.metrics_server import BaseMetricsServer, SimpleMetricsServer
 from kryten.mock import MockKrytenClient
 from kryten.models import (
     ChangeMediaEvent,
@@ -51,7 +52,7 @@ from kryten.models import (
     UserLeaveEvent,
 )
 
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 
 __all__ = [
     # Core client
@@ -74,6 +75,9 @@ __all__ = [
     "ChannelInfo",
     # Lifecycle events
     "LifecycleEventPublisher",
+    # Metrics server
+    "BaseMetricsServer",
+    "SimpleMetricsServer",
     # KeyValue store helpers
     "get_kv_store",
     "kv_get",
