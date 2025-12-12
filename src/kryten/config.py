@@ -77,12 +77,45 @@ class ChannelConfig(BaseModel):
         return v.strip()
 
 
+class ServiceConfig(BaseModel):
+    """Service identity and lifecycle configuration.
+
+    Attributes:
+        name: Service name for lifecycle events (e.g., 'userstats', 'llm')
+        version: Service version string
+        enable_lifecycle: Whether to auto-publish startup/shutdown events
+        enable_heartbeat: Whether to publish periodic heartbeats
+        heartbeat_interval: Heartbeat interval in seconds
+        enable_discovery: Whether to respond to service discovery polls
+
+    Examples:
+        >>> service = ServiceConfig(name="userstats", version="1.0.0")
+    """
+
+    name: str = Field(..., description="Service name for lifecycle events")
+    version: str = Field("1.0.0", description="Service version string")
+    enable_lifecycle: bool = Field(True, description="Auto-publish startup/shutdown events")
+    enable_heartbeat: bool = Field(True, description="Publish periodic heartbeats")
+    heartbeat_interval: int = Field(30, description="Heartbeat interval in seconds", ge=5, le=300)
+    enable_discovery: bool = Field(True, description="Respond to service discovery polls")
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        """Ensure service name is valid."""
+        if not v or not v.strip():
+            raise ValueError("Service name must not be empty")
+        # Lowercase, no dots (for NATS subject compatibility)
+        return v.strip().lower().replace(".", "-")
+
+
 class KrytenConfig(BaseModel):
     """Complete Kryten client configuration.
 
     Attributes:
         nats: NATS connection settings
         channels: List of CyTube channels to connect to
+        service: Optional service identity and lifecycle settings
         retry_attempts: Command retry attempts
         retry_delay: Initial retry delay in seconds
         handler_timeout: Max handler execution time
@@ -92,12 +125,14 @@ class KrytenConfig(BaseModel):
     Examples:
         >>> config = KrytenConfig(
         ...     nats=NatsConfig(servers=["nats://localhost:4222"]),
-        ...     channels=[ChannelConfig(domain="cytu.be", channel="lounge")]
+        ...     channels=[ChannelConfig(domain="cytu.be", channel="lounge")],
+        ...     service=ServiceConfig(name="mybot", version="1.0.0")
         ... )
     """
 
     nats: NatsConfig = Field(..., description="NATS connection settings")
     channels: list[ChannelConfig] = Field(..., description="List of CyTube channels to connect to")
+    service: ServiceConfig | None = Field(None, description="Service identity and lifecycle settings")
     retry_attempts: int = Field(3, description="Command retry attempts", ge=0, le=10)
     retry_delay: float = Field(1.0, description="Initial retry delay in seconds", ge=0.1)
     handler_timeout: float = Field(30.0, description="Max handler execution time", ge=1.0)
@@ -197,5 +232,6 @@ def _substitute_env_vars(content: str) -> str:
 __all__ = [
     "NatsConfig",
     "ChannelConfig",
+    "ServiceConfig",
     "KrytenConfig",
 ]

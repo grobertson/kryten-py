@@ -31,12 +31,30 @@ def mock_logger():
 
 @pytest.fixture
 async def lifecycle_publisher(mock_nats_client, mock_logger):
-    """Create a lifecycle event publisher."""
+    """Create a lifecycle event publisher with default settings."""
     publisher = LifecycleEventPublisher(
         service_name="test_service",
         nats_client=mock_nats_client,
         logger=mock_logger,
-        version="1.0.0"
+        version="1.0.0",
+        enable_heartbeat=False,  # Disable for simpler testing
+        enable_discovery=True,   # Discovery is enabled by default
+    )
+    yield publisher
+    if publisher.is_running:
+        await publisher.stop()
+
+
+@pytest.fixture
+async def lifecycle_publisher_minimal(mock_nats_client, mock_logger):
+    """Create a lifecycle event publisher with heartbeat/discovery disabled."""
+    publisher = LifecycleEventPublisher(
+        service_name="test_service",
+        nats_client=mock_nats_client,
+        logger=mock_logger,
+        version="1.0.0",
+        enable_heartbeat=False,
+        enable_discovery=False,
     )
     yield publisher
     if publisher.is_running:
@@ -54,14 +72,33 @@ class TestLifecycleEventPublisher:
         assert lifecycle_publisher._hostname is not None
     
     async def test_start(self, lifecycle_publisher, mock_nats_client):
-        """Test starting the publisher."""
+        """Test starting the publisher with discovery enabled."""
         await lifecycle_publisher.start()
         
         assert lifecycle_publisher.is_running
         assert lifecycle_publisher._start_time is not None
+        
+        # Should subscribe to both restart notices and discovery polls
+        assert mock_nats_client.subscribe.call_count == 2
+        
+        # Check first subscription (restart notices)
+        calls = mock_nats_client.subscribe.call_args_list
+        restart_call = calls[0]
+        assert restart_call[0][0] == "kryten.lifecycle.group.restart"
+        
+        # Check second subscription (discovery polls)
+        discovery_call = calls[1]
+        assert discovery_call[0][0] == "kryten.service.discovery.poll"
+    
+    async def test_start_minimal(self, lifecycle_publisher_minimal, mock_nats_client):
+        """Test starting publisher with discovery disabled."""
+        await lifecycle_publisher_minimal.start()
+        
+        assert lifecycle_publisher_minimal.is_running
+        # Only restart notices subscription
         mock_nats_client.subscribe.assert_called_once_with(
             "kryten.lifecycle.group.restart",
-            cb=lifecycle_publisher._handle_restart_notice
+            cb=lifecycle_publisher_minimal._handle_restart_notice
         )
     
     async def test_start_already_running(self, lifecycle_publisher, mock_logger):
@@ -74,14 +111,18 @@ class TestLifecycleEventPublisher:
     async def test_stop(self, lifecycle_publisher):
         """Test stopping the publisher."""
         mock_sub = AsyncMock()
+        mock_discovery_sub = AsyncMock()
         lifecycle_publisher._subscription = mock_sub
+        lifecycle_publisher._discovery_subscription = mock_discovery_sub
         lifecycle_publisher._running = True
         
         await lifecycle_publisher.stop()
         
         assert not lifecycle_publisher.is_running
         assert lifecycle_publisher._subscription is None
+        assert lifecycle_publisher._discovery_subscription is None
         mock_sub.unsubscribe.assert_called_once()
+        mock_discovery_sub.unsubscribe.assert_called_once()
     
     async def test_publish_startup(self, lifecycle_publisher, mock_nats_client, mock_logger):
         """Test publishing startup event."""
@@ -210,3 +251,84 @@ class TestLifecycleEventPublisher:
         
         assert data["uptime_seconds"] is not None
         assert data["uptime_seconds"] >= 0.1
+
+    async def test_publish_heartbeat(self, lifecycle_publisher, mock_nats_client):
+        """Test publishing heartbeat event."""
+        await lifecycle_publisher.start()
+        await lifecycle_publisher.publish_heartbeat()
+        
+        # Find heartbeat call
+        for call in mock_nats_client.publish.call_args_list:
+            subject = call[0][0]
+            if "heartbeat" in subject:
+                data = json.loads(call[0][1].decode('utf-8'))
+                assert subject == "kryten.lifecycle.test_service.heartbeat"
+                assert data["service"] == "test_service"
+                assert data["version"] == "1.0.0"
+                assert "uptime_seconds" in data
+                return
+        pytest.fail("Heartbeat not published")
+    
+    async def test_handle_discovery_poll(self, lifecycle_publisher, mock_nats_client):
+        """Test that discovery poll triggers startup re-announcement."""
+        await lifecycle_publisher.start()
+        mock_nats_client.publish.reset_mock()
+        
+        # Simulate discovery poll
+        msg = Mock()
+        msg.data = b"{}"
+        
+        await lifecycle_publisher._handle_discovery_poll(msg)
+        
+        # Should publish startup event
+        assert mock_nats_client.publish.called
+        call_args = mock_nats_client.publish.call_args
+        subject = call_args[0][0]
+        assert subject == "kryten.lifecycle.test_service.startup"
+
+
+class TestHeartbeat:
+    """Tests for automatic heartbeat functionality."""
+    
+    @pytest.fixture
+    async def heartbeat_publisher(self, mock_nats_client, mock_logger):
+        """Create publisher with heartbeat enabled."""
+        publisher = LifecycleEventPublisher(
+            service_name="heartbeat_test",
+            nats_client=mock_nats_client,
+            logger=mock_logger,
+            version="1.0.0",
+            heartbeat_interval=0.1,  # Very short for testing
+            enable_heartbeat=True,
+            enable_discovery=False,
+        )
+        yield publisher
+        if publisher.is_running:
+            await publisher.stop()
+    
+    async def test_heartbeat_loop_publishes(self, heartbeat_publisher, mock_nats_client):
+        """Test that heartbeat loop publishes periodic heartbeats."""
+        await heartbeat_publisher.start()
+        
+        # Wait for a couple heartbeats
+        await asyncio.sleep(0.25)
+        
+        await heartbeat_publisher.stop()
+        
+        # Should have published at least one heartbeat
+        heartbeat_calls = [
+            call for call in mock_nats_client.publish.call_args_list
+            if "heartbeat" in call[0][0]
+        ]
+        assert len(heartbeat_calls) >= 1
+    
+    async def test_heartbeat_task_created(self, heartbeat_publisher):
+        """Test that heartbeat task is created on start."""
+        await heartbeat_publisher.start()
+        
+        assert heartbeat_publisher._heartbeat_task is not None
+        assert not heartbeat_publisher._heartbeat_task.done()
+        
+        await heartbeat_publisher.stop()
+        
+        assert heartbeat_publisher._heartbeat_task is None

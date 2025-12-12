@@ -39,26 +39,25 @@ def test_sanitize_token_empty():
 def test_build_subject_basic():
     """Test building basic subject."""
     subject = build_subject("cytu.be", "lounge", "chatMsg")
-    assert subject == "cytube.events.cytu.be.lounge.chatmsg"
+    assert subject == "kryten.events.cytube.lounge.chatmsg"
 
 
 def test_build_subject_normalizes_case():
     """Test that subject components are normalized."""
     subject = build_subject("CYTU.BE", "LOUNGE", "ChatMsg")
-    assert subject == "cytube.events.cytu.be.lounge.chatmsg"
+    assert subject == "kryten.events.cytube.lounge.chatmsg"
 
 
 def test_build_subject_sanitizes_channel():
     """Test that channel name is sanitized."""
     subject = build_subject("cytu.be", "Test Channel", "chatMsg")
-    assert subject == "cytube.events.cytu.be.test-channel.chatmsg"
+    assert subject == "kryten.events.cytube.test-channel.chatmsg"
 
 
 def test_build_subject_empty_component():
     """Test that empty components raise ValueError."""
-    with pytest.raises(ValueError, match="Domain cannot be empty"):
-        build_subject("", "lounge", "chatMsg")
-
+    # Note: With the new format, domain is ignored (always "cytube")
+    # but we still validate channel and event
     with pytest.raises(ValueError, match="Channel cannot be empty"):
         build_subject("cytu.be", "", "chatMsg")
 
@@ -76,50 +75,48 @@ def test_build_event_subject():
     )
 
     subject = build_event_subject(event)
-    assert subject == "cytube.events.cytu.be.lounge.chatmsg"
+    assert subject == "kryten.events.cytube.lounge.chatmsg"
 
 
 def test_build_command_subject():
     """Test building command subject."""
     subject = build_command_subject("cytu.be", "lounge", "chat")
-    assert subject == "cytube.commands.cytu.be.lounge.chat"
+    assert subject == "kryten.commands.cytube.lounge.chat"
 
 
 def test_build_command_subject_sanitizes():
     """Test command subject sanitization."""
     subject = build_command_subject("Cytu.BE", "Test Channel", "ChatMsg")
-    assert subject == "cytube.commands.cytu.be.test-channel.chatmsg"
+    assert subject == "kryten.commands.cytube.test-channel.chatmsg"
 
 
 def test_parse_subject_basic():
     """Test parsing basic subject."""
-    components = parse_subject("cytube.events.cytu.be.lounge.chatMsg")
+    components = parse_subject("kryten.events.cytube.lounge.chatMsg")
 
-    assert components["prefix"] == "cytube.events"
-    assert components["domain"] == "cytu.be"
+    assert components["prefix"] == "kryten.events"
     assert components["channel"] == "lounge"
     assert components["event_name"] == "chatMsg"
 
 
-def test_parse_subject_localhost():
-    """Test parsing subject with single-token domain."""
-    components = parse_subject("cytube.events.localhost.lounge.chatMsg")
+def test_parse_subject_with_hyphens():
+    """Test parsing subject with hyphenated channel name."""
+    components = parse_subject("kryten.events.cytube.test-channel.chatMsg")
 
-    assert components["domain"] == "localhost"
-    assert components["channel"] == "lounge"
+    assert components["channel"] == "test-channel"
     assert components["event_name"] == "chatMsg"
 
 
 def test_parse_subject_invalid_prefix():
     """Test parsing subject with wrong prefix."""
     with pytest.raises(ValueError, match="Invalid subject prefix"):
-        parse_subject("wrong.prefix.cytu.be.lounge.chatMsg")
+        parse_subject("wrong.prefix.cytube.lounge.chatMsg")
 
 
 def test_parse_subject_too_short():
     """Test parsing subject with too few components."""
-    with pytest.raises(ValueError, match="Invalid subject format"):
-        parse_subject("cytube.events.cytu.be")
+    with pytest.raises(ValueError, match="Invalid subject"):
+        parse_subject("kryten.events.cytube")
 
 
 def test_parse_subject_empty():

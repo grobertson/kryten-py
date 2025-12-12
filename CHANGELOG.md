@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2025-07-27
+
+### Added
+
+- **ServiceConfig**: New configuration model for service identity and lifecycle settings
+  - `name`: Service name for lifecycle events
+  - `version`: Service version string
+  - `enable_lifecycle`: Auto-publish startup/shutdown events
+  - `enable_heartbeat`: Publish periodic heartbeats
+  - `heartbeat_interval`: Heartbeat interval in seconds (5-300s, default 30s)
+  - `enable_discovery`: Respond to service discovery polls
+
+- **Automatic Heartbeats**: When service config is provided with heartbeat enabled:
+  - Background task publishes heartbeat events at configured interval
+  - Heartbeats include service name, version, hostname, and uptime
+  - Published to `kryten.lifecycle.{service}.heartbeat`
+
+- **Service Discovery**: Automatic response to service discovery polls:
+  - Subscribes to `kryten.service.discovery.poll`
+  - Re-announces service via startup event when poll received
+  - Enables runtime discovery of running services
+
+- **Arbitrary Subject Subscriptions**: New `subscribe()` method on KrytenClient
+  - Subscribe to any NATS subject with custom handler
+  - Supports wildcards (`*`, `>`)
+  - Returns subscription object for later unsubscription
+
+- **Generic Publish**: New `publish()` method on KrytenClient
+  - Publish to any NATS subject
+  - Accepts bytes, string, or dict (auto-JSON encoded)
+
+- **Lifecycle Integration**: KrytenClient now manages lifecycle automatically
+  - Publishes startup event on `connect()`
+  - Publishes shutdown event on `disconnect()`
+  - `on_group_restart()` method to handle coordinated restart notices
+  - `lifecycle` property exposes LifecycleEventPublisher
+
+- **New Lifecycle Events**:
+  - `publish_heartbeat()`: Manual heartbeat publication
+  - Discovery poll handling with auto-announce
+
+### Changed
+
+- **Disconnect Method**: Now accepts optional `reason` parameter for shutdown event
+- **LifecycleEventPublisher**: Enhanced constructor with new parameters
+  - `heartbeat_interval`: Configure heartbeat timing
+  - `enable_heartbeat`: Toggle heartbeat feature
+  - `enable_discovery`: Toggle discovery response
+
+## [0.7.0] - 2025-07-27
+
+### Fixed
+
+- **NATS Subject Pattern**: Fixed subscription pattern from `cytube.events.{domain}.{channel}.>` 
+  to `kryten.events.cytube.{channel}.>` to match Kryten-Robot's event publishing format
+
 ## [0.5.9] - 2025-12-09
 
 ### Added

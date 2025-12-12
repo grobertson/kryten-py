@@ -13,7 +13,7 @@ from typing import Any
 import nats
 from nats.aio.client import Client as NATSClient
 
-from kryten.config import KrytenConfig
+from kryten.config import KrytenConfig, ServiceConfig
 from kryten.exceptions import (
     KrytenConnectionError,
     KrytenValidationError,
@@ -21,6 +21,7 @@ from kryten.exceptions import (
 )
 from kryten.health import ChannelInfo, HealthStatus
 from kryten.kv_store import get_kv_store, kv_delete, kv_get, kv_get_all, kv_keys, kv_put
+from kryten.lifecycle_events import LifecycleEventPublisher
 from kryten.models import (
     ChangeMediaEvent,
     ChatMessageEvent,
@@ -103,6 +104,9 @@ class KrytenClient:
         self._event_latencies: list[float] = []
         self._last_event_time: datetime | None = None
         self._channel_metrics: dict[str, int] = defaultdict(int)
+        
+        # Lifecycle events - will be initialized on connect if service config provided
+        self._lifecycle: LifecycleEventPublisher | None = None
 
     async def connect(self) -> None:
         """Establish NATS connection and subscribe to configured channels.
@@ -142,6 +146,20 @@ class KrytenClient:
 
             # Subscribe to channels
             await self._setup_subscriptions()
+            
+            # Start lifecycle publisher if service config provided
+            if self.config.service:
+                self._lifecycle = LifecycleEventPublisher(
+                    nats_client=self._nats,
+                    service_name=self.config.service.name,
+                    version=self.config.service.version,
+                    heartbeat_interval=self.config.service.heartbeat_interval,
+                    enable_heartbeat=self.config.service.enable_heartbeat,
+                    enable_discovery=self.config.service.enable_discovery,
+                    logger=self.logger,
+                )
+                await self._lifecycle.start()
+                await self._lifecycle.publish_startup()
 
             self.logger.info(
                 "Connected to NATS successfully",
@@ -152,8 +170,12 @@ class KrytenClient:
             self.logger.error(f"Failed to connect to NATS: {e}", exc_info=True)
             raise KrytenConnectionError(f"NATS connection failed: {e}") from e
 
-    async def disconnect(self) -> None:
-        """Gracefully close NATS connection and cleanup resources."""
+    async def disconnect(self, reason: str = "Normal shutdown") -> None:
+        """Gracefully close NATS connection and cleanup resources.
+        
+        Args:
+            reason: Reason for disconnection (included in shutdown event)
+        """
         if not self._connected or self._nats is None:
             self.logger.debug("Not connected, nothing to disconnect")
             return
@@ -161,6 +183,12 @@ class KrytenClient:
         self.logger.info("Disconnecting from NATS")
 
         try:
+            # Publish shutdown event and stop lifecycle publisher
+            if self._lifecycle:
+                await self._lifecycle.publish_shutdown(reason=reason)
+                await self._lifecycle.stop()
+                self._lifecycle = None
+            
             # Unsubscribe from all subscriptions
             for sub in self._subscriptions:
                 try:
@@ -182,6 +210,44 @@ class KrytenClient:
 
         except Exception as e:
             self.logger.error(f"Error during disconnect: {e}", exc_info=True)
+
+    @property
+    def lifecycle(self) -> LifecycleEventPublisher | None:
+        """Get the lifecycle event publisher (if service config provided).
+        
+        Returns:
+            LifecycleEventPublisher instance or None if no service config
+        """
+        return self._lifecycle
+
+    def on_group_restart(self, callback: Callable[[dict[str, Any]], Any]) -> None:
+        """Register callback for groupwide restart notices.
+        
+        This allows the service to respond to coordinated restart requests
+        from other services in the cluster.
+        
+        Args:
+            callback: Async function to call when restart notice received.
+                      Signature: async def callback(data: dict) -> None
+                      The data dict contains: initiator, reason, delay_seconds, timestamp
+        
+        Raises:
+            RuntimeError: If lifecycle publisher not initialized (no service config)
+        
+        Examples:
+            >>> async def handle_restart(data):
+            ...     print(f"Restart requested by {data['initiator']}: {data['reason']}")
+            ...     await asyncio.sleep(data['delay_seconds'])
+            ...     # Gracefully shutdown
+            >>>
+            >>> client.on_group_restart(handle_restart)
+        """
+        if self._lifecycle is None:
+            raise RuntimeError(
+                "Lifecycle publisher not initialized. "
+                "Provide 'service' config to enable lifecycle features."
+            )
+        self._lifecycle.on_restart_notice(callback)
 
     async def __aenter__(self) -> "KrytenClient":
         """Async context manager entry (calls connect)."""
@@ -280,6 +346,117 @@ class KrytenClient:
 
         if self._running:
             self.logger.warning("Stop did not complete within timeout")
+
+    async def subscribe(
+        self,
+        subject: str,
+        handler: Callable[[Any], Any],
+    ) -> Any:
+        """Subscribe to an arbitrary NATS subject.
+        
+        This allows subscribing to subjects outside the standard CyTube event
+        pattern, such as service discovery, lifecycle events, or custom topics.
+        
+        Args:
+            subject: NATS subject pattern (supports wildcards like `*` and `>`)
+            handler: Async callback function to handle messages.
+                    Signature: async def handler(msg) -> None
+                    The msg object has .data (bytes), .subject (str), etc.
+        
+        Returns:
+            Subscription object (can be used to unsubscribe later)
+        
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+        
+        Examples:
+            Subscribe to lifecycle events:
+            
+            >>> async def on_startup(msg):
+            ...     data = json.loads(msg.data.decode())
+            ...     print(f"Service started: {data['service']}")
+            >>> 
+            >>> sub = await client.subscribe("kryten.lifecycle.*.startup", on_startup)
+            
+            Subscribe to service discovery polls:
+            
+            >>> async def on_poll(msg):
+            ...     # Re-announce this service
+            ...     pass
+            >>>
+            >>> sub = await client.subscribe("kryten.service.discovery.poll", on_poll)
+        """
+        if self._nats is None:
+            raise KrytenConnectionError("NATS client not initialized - call connect() first")
+        
+        self.logger.debug(f"Subscribing to custom subject: {subject}")
+        
+        sub = await self._nats.subscribe(subject, cb=handler)
+        self._subscriptions.append(sub)
+        
+        self.logger.info(f"Subscribed to: {subject}")
+        return sub
+
+    async def unsubscribe(self, subscription: Any) -> None:
+        """Unsubscribe from a NATS subscription.
+        
+        Args:
+            subscription: Subscription object returned from subscribe()
+        """
+        try:
+            await subscription.unsubscribe()
+            if subscription in self._subscriptions:
+                self._subscriptions.remove(subscription)
+            self.logger.debug("Unsubscribed from subscription")
+        except Exception as e:
+            self.logger.warning(f"Error unsubscribing: {e}")
+
+    async def publish(
+        self,
+        subject: str,
+        data: bytes | str | dict[str, Any],
+    ) -> None:
+        """Publish a message to an arbitrary NATS subject.
+        
+        This allows publishing to subjects outside the standard command pattern,
+        such as lifecycle events or custom inter-service communication.
+        
+        Args:
+            subject: NATS subject to publish to
+            data: Message payload - bytes, string, or dict (will be JSON encoded)
+        
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            PublishError: If publish fails
+        
+        Examples:
+            Publish lifecycle event:
+            
+            >>> await client.publish(
+            ...     "kryten.lifecycle.mybot.startup",
+            ...     {"service": "mybot", "version": "1.0.0"}
+            ... )
+            
+            Publish raw bytes:
+            
+            >>> await client.publish("kryten.custom.topic", b"raw data")
+        """
+        if self._nats is None:
+            raise KrytenConnectionError("NATS client not initialized - call connect() first")
+        
+        # Convert data to bytes
+        if isinstance(data, dict):
+            payload = json.dumps(data).encode("utf-8")
+        elif isinstance(data, str):
+            payload = data.encode("utf-8")
+        else:
+            payload = data
+        
+        try:
+            await self._nats.publish(subject, payload)
+            self.logger.debug(f"Published to {subject}")
+        except Exception as e:
+            raise PublishError(f"Failed to publish to {subject}: {e}") from e
 
     # Command Publishing - Chat
 

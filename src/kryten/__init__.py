@@ -22,7 +22,7 @@ Example:
 """
 
 from kryten.client import KrytenClient
-from kryten.config import ChannelConfig, KrytenConfig, NatsConfig
+from kryten.config import ChannelConfig, KrytenConfig, NatsConfig, ServiceConfig
 from kryten.exceptions import (
     HandlerError,
     KrytenConnectionError,
@@ -51,7 +51,7 @@ from kryten.models import (
     UserLeaveEvent,
 )
 
-__version__ = "0.5.3"
+__version__ = "0.8.0"
 
 __all__ = [
     # Core client
@@ -61,6 +61,7 @@ __all__ = [
     "KrytenConfig",
     "NatsConfig",
     "ChannelConfig",
+    "ServiceConfig",
     # Event models
     "RawEvent",
     "ChatMessageEvent",
