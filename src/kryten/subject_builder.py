@@ -1,26 +1,30 @@
 """NATS Subject Builder for CyTube Events.
 
 This module provides utilities for constructing and parsing hierarchical NATS
-subject strings following the format: cytube.events.{domain}.{channel}.{event_name}
+subject strings following the format: kryten.events.cytube.{channel}.{event_name}
 
 Subject Format
 --------------
-cytube.events.{domain}.{channel}.{event_name}
-            ^        ^         ^
-            |        |         +-- Event type (e.g., chatMsg)
-            |        +------------ Channel name (e.g., lounge)
-            +--------------------- Domain (e.g., cytu.be)
+kryten.events.cytube.{channel}.{event_name}
+          ^       ^        ^         ^
+          |       |        |         +-- Event type (e.g., chatmsg)
+          |       |        +------------ Channel name (e.g., 420grindhouse)
+          |       +--------------------- Platform literal (always "cytube")
+          +----------------------------- Namespace (always "kryten")
+
+All tokens are normalized: lowercase, dots removed, spaces to hyphens.
+This ensures cy.tube, Cy.tube, cytu.be all normalize to "cytube".
+Channels like "420Grindhouse" normalize to "420grindhouse".
 
 Wildcard Subscriptions
 ----------------------
 NATS supports wildcard subscriptions for flexible filtering:
 
 - Single level wildcard (*):
-  cytube.events.*.lounge.chatMsg  # All domains, lounge channel, chatMsg events
+  kryten.events.cytube.*.chatmsg  # All channels, chatmsg events
 
 - Multi-level wildcard (>):
-  cytube.events.cytu.be.>          # All events from cytu.be domain
-  cytube.events.*.lounge.>         # All events from any domain's lounge channel
+  kryten.events.cytube.420grindhouse.>  # All events from 420grindhouse channel
 
 Examples
 --------
@@ -30,7 +34,7 @@ Examples
 >>> # Build subject from components
 >>> subject = build_subject("cytu.be", "lounge", "chatMsg")
 >>> print(subject)
-'cytube.events.cytu.be.lounge.chatmsg'
+'kryten.events.cytube.lounge.chatmsg'
 >>>
 >>> # Build subject from RawEvent
 >>> event = RawEvent("chatMsg", {}, "lounge", "cytu.be")
@@ -38,9 +42,9 @@ Examples
 >>>
 >>> # Parse subject back to components
 >>> from kryten.subject_builder import parse_subject
->>> components = parse_subject("cytube.events.cytu.be.lounge.chatMsg")
->>> print(components['domain'])
-'cytu.be'
+>>> components = parse_subject("kryten.events.cytube.lounge.chatmsg")
+>>> print(components['channel'])
+'lounge'
 """
 
 from kryten.models import RawEvent

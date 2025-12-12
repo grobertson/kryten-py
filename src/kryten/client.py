@@ -29,7 +29,7 @@ from kryten.models import (
     UserJoinEvent,
     UserLeaveEvent,
 )
-from kryten.subject_builder import build_command_subject
+from kryten.subject_builder import SUBJECT_PREFIX, build_command_subject
 
 
 class KrytenClient:
@@ -1896,9 +1896,10 @@ class KrytenClient:
 
         for channel_config in self.config.channels:
             # Subscribe to all events from this channel using wildcard
-            subject = (
-                f"cytube.events.{channel_config.domain.lower()}.{channel_config.channel.lower()}.>"
-            )
+            # Format: kryten.events.cytube.{channel}.>
+            # Channel is normalized (lowercase, dots removed)
+            channel_normalized = channel_config.channel.lower().replace(".", "")
+            subject = f"{SUBJECT_PREFIX}.cytube.{channel_normalized}.>"
 
             self.logger.info(f"Subscribing to: {subject}")
 
