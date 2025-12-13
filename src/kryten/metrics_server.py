@@ -8,7 +8,8 @@ import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from aiohttp import web
 

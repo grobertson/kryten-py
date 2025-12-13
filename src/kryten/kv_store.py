@@ -18,18 +18,18 @@ async def get_kv_store(
     logger: logging.Logger | None = None
 ) -> Any:
     """Get or create a NATS JetStream KeyValue store.
-    
+
     Args:
         nats_client: Connected NATS client.
         bucket_name: Name of the KV bucket.
         logger: Optional logger for error reporting.
-    
+
     Returns:
         KeyValue bucket instance.
-    
+
     Raises:
         Exception: If JetStream is not available or bucket creation fails.
-    
+
     Examples:
         >>> kv = await get_kv_store(nats_client, "my_bucket", logger)
         >>> await kv.put("key", b"value")
@@ -57,17 +57,17 @@ async def kv_get(
     logger: logging.Logger | None = None
 ) -> Any:
     """Get a value from KeyValue store.
-    
+
     Args:
         kv_store: KeyValue bucket instance.
         key: Key to retrieve.
         default: Default value if key doesn't exist.
         parse_json: If True, parse value as JSON.
         logger: Optional logger for error reporting.
-    
+
     Returns:
         Value from store, or default if key doesn't exist.
-    
+
     Examples:
         >>> value = await kv_get(kv, "config", default={}, parse_json=True)
         >>> raw_bytes = await kv_get(kv, "data")
@@ -76,7 +76,7 @@ async def kv_get(
         entry = await kv_store.get(key)
         if entry is None:
             return default
-        
+
         value = entry.value
         if parse_json and value:
             try:
@@ -85,9 +85,9 @@ async def kv_get(
                 if logger:
                     logger.error("Failed to parse JSON for key %s: %s", key, e)
                 return default
-        
+
         return value if value is not None else default
-    
+
     except Exception as e:
         if logger:
             logger.error("Failed to get key %s: %s", key, e)
@@ -102,17 +102,17 @@ async def kv_put(
     logger: logging.Logger | None = None
 ) -> bool:
     """Put a value into KeyValue store.
-    
+
     Args:
         kv_store: KeyValue bucket instance.
         key: Key to store.
         value: Value to store (bytes, str, or dict/list if as_json=True).
         as_json: If True, serialize value as JSON.
         logger: Optional logger for error reporting.
-    
+
     Returns:
         True if successful, False otherwise.
-    
+
     Examples:
         >>> await kv_put(kv, "config", {"setting": "value"}, as_json=True)
         >>> await kv_put(kv, "data", b"raw bytes")
@@ -127,12 +127,12 @@ async def kv_put(
         else:
             # Try to convert to string then bytes
             data = str(value).encode('utf-8')
-        
+
         await kv_store.put(key, data)
         if logger:
             logger.debug("Stored key %s in KV store", key)
         return True
-    
+
     except Exception as e:
         if logger:
             logger.error("Failed to put key %s: %s", key, e)
@@ -145,15 +145,15 @@ async def kv_delete(
     logger: logging.Logger | None = None
 ) -> bool:
     """Delete a key from KeyValue store.
-    
+
     Args:
         kv_store: KeyValue bucket instance.
         key: Key to delete.
         logger: Optional logger for error reporting.
-    
+
     Returns:
         True if successful, False otherwise.
-    
+
     Examples:
         >>> await kv_delete(kv, "old_key")
     """
@@ -173,14 +173,14 @@ async def kv_keys(
     logger: logging.Logger | None = None
 ) -> list[str]:
     """Get all keys from KeyValue store.
-    
+
     Args:
         kv_store: KeyValue bucket instance.
         logger: Optional logger for error reporting.
-    
+
     Returns:
         List of keys in the store.
-    
+
     Examples:
         >>> keys = await kv_keys(kv)
         >>> print(f"Found {len(keys)} keys")
@@ -200,15 +200,15 @@ async def kv_get_all(
     logger: logging.Logger | None = None
 ) -> dict[str, Any]:
     """Get all key-value pairs from KeyValue store.
-    
+
     Args:
         kv_store: KeyValue bucket instance.
         parse_json: If True, parse values as JSON.
         logger: Optional logger for error reporting.
-    
+
     Returns:
         Dictionary of all key-value pairs.
-    
+
     Examples:
         >>> data = await kv_get_all(kv, parse_json=True)
         >>> for key, value in data.items():
@@ -216,12 +216,12 @@ async def kv_get_all(
     """
     result = {}
     keys = await kv_keys(kv_store, logger)
-    
+
     for key in keys:
         value = await kv_get(kv_store, key, parse_json=parse_json, logger=logger)
         if value is not None:
             result[key] = value
-    
+
     return result
 
 

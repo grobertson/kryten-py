@@ -24,10 +24,10 @@ from nats.aio.client import Client as NATSClient
 
 class LifecycleEventPublisher:
     """Publisher for service lifecycle events.
-    
+
     Publishes events for service startup, shutdown, connection changes,
     periodic heartbeats, and handles service discovery.
-    
+
     Subject patterns:
         - kryten.lifecycle.{service}.startup
         - kryten.lifecycle.{service}.shutdown
@@ -36,12 +36,12 @@ class LifecycleEventPublisher:
         - kryten.lifecycle.{service}.disconnected
         - kryten.lifecycle.group.restart (broadcast to all services)
         - kryten.service.discovery.poll (listen for discovery requests)
-    
+
     Attributes:
         service_name: Name of this service (e.g., "robot", "userstats")
         nats_client: NATS client for publishing events.
         logger: Logger instance.
-    
+
     Examples:
         >>> lifecycle = LifecycleEventPublisher("myservice", nats_client, logger)
         >>> await lifecycle.start()
@@ -50,7 +50,7 @@ class LifecycleEventPublisher:
         >>> await lifecycle.publish_shutdown()
         >>> await lifecycle.stop()
     """
-    
+
     def __init__(
         self,
         service_name: str,
@@ -62,7 +62,7 @@ class LifecycleEventPublisher:
         enable_discovery: bool = True,
     ) -> None:
         """Initialize lifecycle event publisher.
-        
+
         Args:
             service_name: Name of this service (robot, userstats, etc.).
             nats_client: NATS client for event publishing.
@@ -79,52 +79,52 @@ class LifecycleEventPublisher:
         self._heartbeat_interval = heartbeat_interval
         self._enable_heartbeat = enable_heartbeat
         self._enable_discovery = enable_discovery
-        
+
         self._running = False
         self._subscription: Any = None
         self._discovery_subscription: Any = None
         self._heartbeat_task: asyncio.Task | None = None
         self._restart_callback: Callable[[dict[str, Any]], Any] | None = None
-        
+
         # Service metadata
         self._hostname = socket.gethostname()
         self._start_time: datetime | None = None
         self._heartbeat_count = 0
-        
+
         # Custom metadata for heartbeats/discovery
         self._custom_metadata: dict[str, Any] = {}
-    
+
     @property
     def is_running(self) -> bool:
         """Check if lifecycle publisher is running."""
         return self._running
-    
+
     def set_metadata(self, key: str, value: Any) -> None:
         """Set custom metadata to include in heartbeats and discovery responses.
-        
+
         Args:
             key: Metadata key
             value: Metadata value (must be JSON-serializable)
         """
         self._custom_metadata[key] = value
-    
+
     def update_metadata(self, data: dict[str, Any]) -> None:
         """Update multiple custom metadata values.
-        
+
         Args:
             data: Dictionary of metadata to merge
         """
         self._custom_metadata.update(data)
-    
+
     async def start(self) -> None:
         """Start lifecycle event publisher, heartbeats, and discovery handler."""
         if self._running:
             self._logger.warning("Lifecycle event publisher already running")
             return
-        
+
         self._running = True
         self._start_time = datetime.now(timezone.utc)
-        
+
         # Subscribe to groupwide restart notices
         try:
             self._subscription = await self._nats.subscribe(
@@ -134,7 +134,7 @@ class LifecycleEventPublisher:
             self._logger.info("Subscribed to groupwide restart notices")
         except Exception as e:
             self._logger.error("Failed to subscribe to restart notices: %s", e, exc_info=True)
-        
+
         # Subscribe to service discovery polls
         if self._enable_discovery:
             try:
@@ -145,19 +145,19 @@ class LifecycleEventPublisher:
                 self._logger.info("Subscribed to service discovery polls")
             except Exception as e:
                 self._logger.error("Failed to subscribe to discovery polls: %s", e, exc_info=True)
-        
+
         # Start heartbeat task
         if self._enable_heartbeat:
             self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
             self._logger.info("Started heartbeat task (interval: %ds)", self._heartbeat_interval)
-    
+
     async def stop(self) -> None:
         """Stop lifecycle event publisher and heartbeat task."""
         if not self._running:
             return
-        
+
         self._running = False
-        
+
         # Stop heartbeat task
         if self._heartbeat_task and not self._heartbeat_task.done():
             self._heartbeat_task.cancel()
@@ -166,25 +166,25 @@ class LifecycleEventPublisher:
             except asyncio.CancelledError:
                 pass
             self._logger.debug("Heartbeat task stopped")
-        
+
         # Unsubscribe from restart notices
         if self._subscription:
             try:
                 await self._subscription.unsubscribe()
             except Exception as e:
                 self._logger.warning("Error unsubscribing from restart notices: %s", e)
-        
+
         # Unsubscribe from discovery polls
         if self._discovery_subscription:
             try:
                 await self._discovery_subscription.unsubscribe()
             except Exception as e:
                 self._logger.warning("Error unsubscribing from discovery polls: %s", e)
-        
+
         self._subscription = None
         self._discovery_subscription = None
         self._heartbeat_task = None
-    
+
     async def _heartbeat_loop(self) -> None:
         """Background task that publishes periodic heartbeats."""
         while self._running:
@@ -197,7 +197,7 @@ class LifecycleEventPublisher:
             except Exception as e:
                 self._logger.error("Error in heartbeat loop: %s", e, exc_info=True)
                 await asyncio.sleep(5)  # Brief delay before retrying
-    
+
     async def _handle_discovery_poll(self, msg: Any) -> None:  # noqa: ARG002
         """Handle service discovery poll by re-publishing startup event."""
         try:
@@ -205,49 +205,49 @@ class LifecycleEventPublisher:
             await self.publish_startup()
         except Exception as e:
             self._logger.error("Error handling discovery poll: %s", e, exc_info=True)
-    
+
     def on_restart_notice(self, callback: Callable[[dict[str, Any]], Any]) -> None:
         """Register callback for groupwide restart notices.
-        
+
         Args:
             callback: Async function to call when restart notice received.
                       Signature: async def callback(data: dict) -> None
         """
         self._restart_callback = callback
-    
+
     async def _handle_restart_notice(self, msg: Any) -> None:
         """Handle incoming groupwide restart notice."""
         try:
             data = json.loads(msg.data.decode('utf-8'))
-            
+
             # Extract restart parameters
             initiator = data.get('initiator', 'unknown')
             reason = data.get('reason', 'No reason provided')
             delay_seconds = data.get('delay_seconds', 5)
-            
+
             self._logger.warning(
                 "Groupwide restart notice received from %s: %s (restarting in %ss)",
                 initiator, reason, delay_seconds
             )
-            
+
             # Call registered callback if any
             if self._restart_callback:
                 try:
                     await self._restart_callback(data)
                 except Exception as e:
                     self._logger.error("Error in restart callback: %s", e, exc_info=True)
-        
+
         except json.JSONDecodeError as e:
             self._logger.error("Invalid restart notice JSON: %s", e)
         except Exception as e:
             self._logger.error("Error handling restart notice: %s", e, exc_info=True)
-    
+
     def _build_base_payload(self) -> dict[str, Any]:
         """Build base event payload with common metadata."""
         uptime = None
         if self._start_time:
             uptime = (datetime.now(timezone.utc) - self._start_time).total_seconds()
-        
+
         return {
             "service": self._service_name,
             "version": self._version,
@@ -255,27 +255,27 @@ class LifecycleEventPublisher:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "uptime_seconds": uptime,
         }
-    
+
     async def publish_startup(self, **extra_data: Any) -> None:
         """Publish service startup event.
-        
+
         Args:
             **extra_data: Additional key-value pairs to include in event.
         """
         subject = f"kryten.lifecycle.{self._service_name}.startup"
         payload = self._build_base_payload()
         payload.update(extra_data)
-        
+
         try:
             data_bytes = json.dumps(payload).encode('utf-8')
             await self._nats.publish(subject, data_bytes)
             self._logger.info("Published startup event to %s", subject)
         except Exception as e:
             self._logger.error("Failed to publish startup event: %s", e, exc_info=True)
-    
+
     async def publish_shutdown(self, reason: str = "Normal shutdown", **extra_data: Any) -> None:
         """Publish service shutdown event.
-        
+
         Args:
             reason: Reason for shutdown.
             **extra_data: Additional key-value pairs to include in event.
@@ -284,37 +284,37 @@ class LifecycleEventPublisher:
         payload = self._build_base_payload()
         payload["reason"] = reason
         payload.update(extra_data)
-        
+
         try:
             data_bytes = json.dumps(payload).encode('utf-8')
             await self._nats.publish(subject, data_bytes)
             self._logger.info("Published shutdown event to %s", subject)
         except Exception as e:
             self._logger.error("Failed to publish shutdown event: %s", e, exc_info=True)
-    
+
     async def publish_heartbeat(self, **extra_data: Any) -> None:
         """Publish service heartbeat event.
-        
+
         Heartbeats are published periodically to indicate the service is alive.
         They include uptime information and can be used for health monitoring.
-        
+
         Args:
             **extra_data: Additional key-value pairs to include in event.
         """
         subject = f"kryten.lifecycle.{self._service_name}.heartbeat"
         payload = self._build_base_payload()
         payload.update(extra_data)
-        
+
         try:
             data_bytes = json.dumps(payload).encode('utf-8')
             await self._nats.publish(subject, data_bytes)
             self._logger.debug("Published heartbeat to %s", subject)
         except Exception as e:
             self._logger.error("Failed to publish heartbeat: %s", e, exc_info=True)
-    
+
     async def publish_connected(self, target: str, **extra_data: Any) -> None:
         """Publish connection established event.
-        
+
         Args:
             target: Connection target (e.g., "CyTube", "NATS", "Database").
             **extra_data: Additional key-value pairs to include in event.
@@ -323,17 +323,17 @@ class LifecycleEventPublisher:
         payload = self._build_base_payload()
         payload["target"] = target
         payload.update(extra_data)
-        
+
         try:
             data_bytes = json.dumps(payload).encode('utf-8')
             await self._nats.publish(subject, data_bytes)
             self._logger.debug("Published connected event to %s", subject)
         except Exception as e:
             self._logger.error("Failed to publish connected event: %s", e, exc_info=True)
-    
+
     async def publish_disconnected(self, target: str, reason: str = "Unknown", **extra_data: Any) -> None:
         """Publish connection lost event.
-        
+
         Args:
             target: Connection target (e.g., "CyTube", "NATS").
             reason: Reason for disconnection.
@@ -344,14 +344,14 @@ class LifecycleEventPublisher:
         payload["target"] = target
         payload["reason"] = reason
         payload.update(extra_data)
-        
+
         try:
             data_bytes = json.dumps(payload).encode('utf-8')
             await self._nats.publish(subject, data_bytes)
             self._logger.warning("Published disconnected event to %s", subject)
         except Exception as e:
             self._logger.error("Failed to publish disconnected event: %s", e, exc_info=True)
-    
+
     async def publish_group_restart(
         self,
         reason: str,
@@ -360,7 +360,7 @@ class LifecycleEventPublisher:
         **extra_data: Any
     ) -> None:
         """Publish groupwide restart notice to all Kryten services.
-        
+
         Args:
             reason: Reason for restart (e.g., "Configuration update").
             delay_seconds: Seconds to wait before restarting.
@@ -375,7 +375,7 @@ class LifecycleEventPublisher:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         payload.update(extra_data)
-        
+
         try:
             data_bytes = json.dumps(payload).encode('utf-8')
             await self._nats.publish(subject, data_bytes)

@@ -21,6 +21,8 @@ Example:
     ...     await client.run()
 """
 
+__version__ = "0.9.1"
+
 from kryten.client import KrytenClient
 from kryten.config import ChannelConfig, KrytenConfig, NatsConfig, ServiceConfig
 from kryten.exceptions import (

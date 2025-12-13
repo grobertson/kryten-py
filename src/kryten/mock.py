@@ -390,10 +390,10 @@ class MockKrytenClient:
                 else:
                     username = payload.get("username", "")
                     rank = payload.get("rank", 0)
-                
+
                 # Message field can be 'msg' or 'message'
                 message = payload.get("msg", payload.get("message", ""))
-                
+
                 # Time is Unix timestamp in milliseconds
                 time_ms = payload.get("time", 0)
                 timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
@@ -416,7 +416,7 @@ class MockKrytenClient:
                 else:
                     username = payload.get("username", "")
                     rank = payload.get("rank", 0)
-                
+
                 message = payload.get("msg", payload.get("message", ""))
                 time_ms = payload.get("time", 0)
                 timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
