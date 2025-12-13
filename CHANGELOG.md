@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2025-12-12
+
+### Added
+
+- **NATS Request-Reply**: New `nats_request()` method for request-reply pattern
+  - Send request and wait for single response
+  - Configurable timeout (default 5.0s)
+  - Auto-encodes dict payloads to JSON
+  - Returns parsed JSON response
+
+- **Request-Reply Subscriptions**: New `subscribe_request_reply()` method
+  - Subscribe to subjects expecting request-reply pattern
+  - Handler receives parsed request, returns response dict
+  - Auto-encodes response as JSON
+
+### Fixed
+
+- **MetricsServer Graceful Shutdown**: Fixed `stop()` method to properly handle None state
+  - Check for None runner/site before cleanup
+  - Prevents AttributeError on early shutdown
+
+## [0.8.1] - 2025-12-10
+
+### Fixed
+
+- **aiohttp Dependency**: Added aiohttp as optional dependency for metrics server
+  - Install with `pip install kryten-py[metrics]` or include aiohttp manually
+
 ## [0.8.0] - 2025-07-27
 
 ### Added
