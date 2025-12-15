@@ -13,6 +13,7 @@ from typing import Any
 import nats
 from nats.aio.client import Client as NATSClient
 
+from kryten import __version__
 from kryten.config import KrytenConfig
 from kryten.exceptions import (
     KrytenConnectionError,
@@ -162,7 +163,7 @@ class KrytenClient:
                 await self._lifecycle.publish_startup()
 
             self.logger.info(
-                "Connected to NATS successfully",
+                f"kryten-py v{__version__} connected to NATS",
                 extra={"channels": [f"{c.domain}/{c.channel}" for c in self.config.channels]},
             )
 
