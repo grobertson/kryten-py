@@ -2329,9 +2329,32 @@ class KrytenClient:
     # NATS callbacks
 
     async def _on_error(self, e: Exception) -> None:
-        """Handle NATS error."""
+        """Handle NATS error.
+        
+        Connection-related errors during reconnection are expected and logged
+        at WARNING level. Other errors are logged at ERROR with full traceback.
+        """
         self._errors += 1
-        self.logger.error(f"NATS error: {e}", exc_info=True)
+        
+        # Check if this is a connection-related error (expected during reconnection)
+        error_str = str(e).lower()
+        is_connection_error = any(term in error_str for term in [
+            "connection refused",
+            "connection reset",
+            "connection closed",
+            "timed out",
+            "timeout",
+            "winerror 1225",  # Windows connection refused
+            "errno 111",      # Linux connection refused
+            "errno 104",      # Linux connection reset
+        ])
+        
+        if is_connection_error:
+            # Expected during reconnection attempts - log without traceback
+            self.logger.warning(f"NATS connection error (will retry): {e}")
+        else:
+            # Unexpected error - log with full traceback
+            self.logger.error(f"NATS error: {e}", exc_info=True)
 
     async def _on_disconnected(self) -> None:
         """Handle NATS disconnection."""
