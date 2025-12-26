@@ -21,7 +21,15 @@ from kryten.exceptions import (
     PublishError,
 )
 from kryten.health import ChannelInfo, HealthStatus
-from kryten.kv_store import get_kv_store, kv_delete, kv_get, kv_get_all, kv_keys, kv_put
+from kryten.kv_store import (
+    get_kv_store,
+    get_or_create_kv_store,
+    kv_delete,
+    kv_get,
+    kv_get_all,
+    kv_keys,
+    kv_put,
+)
 from kryten.lifecycle_events import LifecycleEventPublisher
 from kryten.models import (
     ChangeMediaEvent,
@@ -82,7 +90,7 @@ class KrytenClient:
         self.logger.setLevel(self.config.log_level)
 
         # NATS connection
-        self._nats: NATSClient | None = None
+        self.__nats: NATSClient | None = None
         self._connected = False
         self._connection_time: float | None = None
 
@@ -127,7 +135,7 @@ class KrytenClient:
 
         try:
             # Create NATS client
-            self._nats = await nats.connect(
+            self.__nats = await nats.connect(
                 servers=self.config.nats.servers,
                 user=self.config.nats.user,
                 password=self.config.nats.password,
@@ -150,14 +158,32 @@ class KrytenClient:
 
             # Start lifecycle publisher if service config provided
             if self.config.service:
+                # Auto-detect endpoint config from metrics section if not set in service
+                health_port = self.config.service.health_port
+                health_path = self.config.service.health_path
+                metrics_port = self.config.service.metrics_port
+                metrics_path = self.config.service.metrics_path
+
+                # Fallback to metrics config if service endpoints not explicitly set
+                if self.config.metrics and health_port is None:
+                    health_port = self.config.metrics.port
+                    health_path = self.config.metrics.health_path
+                if self.config.metrics and metrics_port is None:
+                    metrics_port = self.config.metrics.port
+                    metrics_path = self.config.metrics.metrics_path
+
                 self._lifecycle = LifecycleEventPublisher(
-                    nats_client=self._nats,
+                    nats_client=self.__nats,
                     service_name=self.config.service.name,
                     version=self.config.service.version,
                     heartbeat_interval=self.config.service.heartbeat_interval,
                     enable_heartbeat=self.config.service.enable_heartbeat,
                     enable_discovery=self.config.service.enable_discovery,
                     logger=self.logger,
+                    health_port=health_port,
+                    health_path=health_path,
+                    metrics_port=metrics_port,
+                    metrics_path=metrics_path,
                 )
                 await self._lifecycle.start()
                 await self._lifecycle.publish_startup()
@@ -177,7 +203,7 @@ class KrytenClient:
         Args:
             reason: Reason for disconnection (included in shutdown event)
         """
-        if not self._connected or self._nats is None:
+        if not self._connected or self.__nats is None:
             self.logger.debug("Not connected, nothing to disconnect")
             return
 
@@ -203,15 +229,15 @@ class KrytenClient:
             # Use close() instead of drain() to avoid timeout issues
             # drain() can hang if the server is slow or messages are in-flight
             try:
-                await asyncio.wait_for(self._nats.close(), timeout=5.0)
+                await asyncio.wait_for(self.__nats.close(), timeout=5.0)
             except asyncio.TimeoutError:
                 self.logger.warning("NATS close timed out, forcing disconnect")
                 # Force close if clean close times out
-                if self._nats.is_connected:
-                    await self._nats.close()
+                if self.__nats.is_connected:
+                    await self.__nats.close()
 
             self._connected = False
-            self._nats = None
+            self.__nats = None
             self._connection_time = None
 
             self.logger.info("Disconnected from NATS successfully")
@@ -220,7 +246,7 @@ class KrytenClient:
             self.logger.error(f"Error during disconnect: {e}", exc_info=True)
             # Ensure we mark as disconnected even on error
             self._connected = False
-            self._nats = None
+            self.__nats = None
             self._connection_time = None
 
     @property
@@ -398,12 +424,12 @@ class KrytenClient:
             >>>
             >>> sub = await client.subscribe("kryten.service.discovery.poll", on_poll)
         """
-        if self._nats is None:
+        if self.__nats is None:
             raise KrytenConnectionError("NATS client not initialized - call connect() first")
 
         self.logger.debug(f"Subscribing to custom subject: {subject}")
 
-        sub = await self._nats.subscribe(subject, cb=handler)
+        sub = await self.__nats.subscribe(subject, cb=handler)
         self._subscriptions.append(sub)
 
         self.logger.info(f"Subscribed to: {subject}")
@@ -453,7 +479,7 @@ class KrytenClient:
 
             >>> await client.publish("kryten.custom.topic", b"raw data")
         """
-        if self._nats is None:
+        if self.__nats is None:
             raise KrytenConnectionError("NATS client not initialized - call connect() first")
 
         # Convert data to bytes
@@ -464,13 +490,126 @@ class KrytenClient:
         else:
             payload = data
 
+        # Validate subject pattern
+        if subject.startswith("kryten.command."):
+            self.logger.warning(
+                f"Use 'send_command()' instead of 'publish()' for sending commands: {subject}"
+            )
+        elif self.config.service and subject.startswith(f"kryten.events."):
+            # Check if event is from this service
+            expected_prefix = f"kryten.events.{self.config.service.name}."
+            if "cytube" in subject:
+                self.logger.warning(
+                    f"Publishing to legacy 'kryten.events.cytube.*' subject: {subject}. "
+                    "This format is deprecated."
+                )
+            elif not subject.startswith(expected_prefix): 
+                self.logger.warning(
+                    f"Publishing event to foreign service subject: {subject}. "
+                    f"Expected prefix: {expected_prefix}"
+                )
+
         try:
-            await self._nats.publish(subject, payload)
+            await self.__nats.publish(subject, payload)
             self.logger.debug(f"Published to {subject}")
         except Exception as e:
             raise PublishError(f"Failed to publish to {subject}: {e}") from e
 
     # Command Publishing - Chat
+
+    async def send_command(
+        self,
+        service: str,
+        type: str,
+        body: Any,
+        domain: str = "cytu.be",
+        channel: str = "lounge",
+    ) -> None:
+        """Send a command to a specific service.
+
+        This is a public wrapper around __send_command for external usage (e.g. by kryten-playlist).
+        
+        Args:
+            service: Target service (e.g., 'robot', 'llm', 'playlist')
+            type: Command type identifier
+            body: Command payload/body (will be passed as 'args')
+            domain: Target domain (default: cytu.be)
+            channel: Target channel (default: lounge)
+
+        Raises:
+            KrytenConnectionError: If not connected
+            PublishError: If publishing fails
+        """
+        await self.__send_command(service, type, body, domain, channel)
+
+    async def __send_command(
+        self,
+        service: str,
+        type: str,
+        body: Any,
+        domain: str = "cytu.be",
+        channel: str = "lounge",
+    ) -> None:
+        """Send a command to a specific service.
+
+        Args:
+            service: Target service (e.g., 'robot', 'llm', 'playlist')
+            type: Command type identifier
+            body: Command payload/body (will be passed as 'args')
+            domain: Target domain (default: cytu.be)
+            channel: Target channel (default: lounge)
+
+        Raises:
+            KrytenConnectionError: If not connected
+            PublishError: If publishing fails
+        """
+        if not self._connected or self.__nats is None:
+            raise KrytenConnectionError("Not connected to NATS")
+
+        subject = build_command_subject(service)
+
+        # Standard Protocol Format:
+        # {
+        #   "command": "action_name",
+        #   "args": { ... },
+        #   "meta": { ... }
+        # }
+        
+        # If body is a primitive (str), wrap it if the command expects it.
+        # But 'body' is generic. The protocol says 'args' is a dict.
+        # If 'body' is passed as a string (e.g. for 'say'), we need to know the key.
+        # However, for generic 'send_command', we should probably expect 'body' to be the 'args' dict
+        # or handle it upstream. 
+        
+        # In `send_chat`, I passed `body=message`. Robot expects `args.message`.
+        # So I should change `send_chat` to pass `body={"message": message}`.
+        
+        args = body if isinstance(body, dict) else {"value": body}
+
+        payload = {
+            "command": type,
+            "args": args,
+            "meta": {
+                "source": self.config.service.name if self.config.service else "kryten-client",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "domain": domain,
+                "channel": channel,
+                "request_id": str(uuid.uuid4())
+            },
+        }
+
+        try:
+            data = json.dumps(payload).encode("utf-8")
+            await self.__nats.publish(subject, data)
+            self._commands_sent += 1
+            self.logger.debug(
+                f"Sent command to {service}: {type}",
+                extra={"subject": subject, "payload_size": len(data)},
+            )
+        except Exception as e:
+            self._errors += 1
+            self.logger.error(f"Failed to send command: {e}", exc_info=True)
+            raise PublishError(f"Failed to publish command: {e}") from e
 
     async def send_chat(
         self,
@@ -494,14 +633,19 @@ class KrytenClient:
             PublishError: If publish fails
 
         Examples:
-            >>> correlation_id = await client.send_chat("lounge", "Hello!")
+            >>> await client.send_chat("lounge", "Hello!")
         """
-        return await self._send_command(
-            channel=channel,
-            action="chat",
-            data={"message": message},
-            domain=domain,
+        # Ensure domain is set
+        target_domain = domain or self.config.channels[0].domain
+        
+        await self.__send_command(
+            service="robot",
+            type="say",
+            body={"message": message},
+            domain=target_domain,
+            channel=channel
         )
+        return "" # send_command returns None now
 
     async def send_pm(
         self,
@@ -511,27 +655,17 @@ class KrytenClient:
         *,
         domain: str | None = None,
     ) -> str:
-        """Send private message to user.
-
-        Args:
-            channel: Channel name
-            username: Target username
-            message: Message text
-            domain: Optional domain
-
-        Returns:
-            Correlation ID
-
-        Raises:
-            KrytenConnectionError: If not connected
-            PublishError: If publish fails
-        """
-        return await self._send_command(
-            channel=channel,
-            action="pm",
-            data={"to": username, "message": message},
-            domain=domain,
+        """Send private message to user."""
+        target_domain = domain or self.config.channels[0].domain
+        
+        await self.__send_command(
+            service="robot",
+            type="pm",
+            body={"to": username, "msg": message}, # Handler expects args dict
+            domain=target_domain,
+            channel=channel
         )
+        return ""
 
     # Command Publishing - Playlist
 
@@ -542,6 +676,7 @@ class KrytenClient:
         media_id: str,
         *,
         position: str = "end",
+        temp: bool = True,
         domain: str | None = None,
     ) -> str:
         """Add media to playlist.
@@ -551,19 +686,21 @@ class KrytenClient:
             media_type: Media type (e.g., "yt", "vm", "dm")
             media_id: Media ID (YouTube video ID, etc.)
             position: "end" or "next"
+            temp: Mark as temporary (default: True)
             domain: Optional domain
 
         Returns:
             Correlation ID
-
+        
         Examples:
             >>> await client.add_media("lounge", "yt", "dQw4w9WgXcQ")
         """
-        return await self._send_command(
-            channel=channel,
-            action="queue",
-            data={"type": media_type, "id": media_id, "pos": position},
+        return await self.__send_command(
+            service="robot",
+            type="addvideo", # Updated to match RobotCommandHandler
+            body={"type": media_type, "id": media_id, "pos": position, "temp": temp},
             domain=domain,
+            channel=channel # Added channel
         )
 
     async def delete_media(
@@ -2646,6 +2783,45 @@ class KrytenClient:
 
         return await get_kv_store(self._nats, bucket_name)
 
+    async def get_or_create_kv_bucket(
+        self,
+        bucket_name: str,
+        description: str | None = None,
+        max_value_size: int = 1024 * 1024,
+    ):
+        """Get or create a NATS JetStream KeyValue bucket.
+
+        Use this for services that own their own buckets. If the bucket
+        doesn't exist, it will be created with the specified configuration.
+
+        Args:
+            bucket_name: Name of the KV bucket
+            description: Description for the bucket (used on creation)
+            max_value_size: Maximum value size in bytes (default 1MB)
+
+        Returns:
+            KeyValue bucket instance
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+
+        Example:
+            >>> kv = await client.get_or_create_kv_bucket(
+            ...     "my_service_data",
+            ...     description="My service state"
+            ... )
+        """
+        if not self._nats:
+            raise KrytenConnectionError("Not connected to NATS")
+
+        return await get_or_create_kv_store(
+            self._nats,
+            bucket_name,
+            description=description,
+            max_value_size=max_value_size,
+            logger=self.logger,
+        )
+
     async def kv_get(
         self,
         bucket_name: str,
@@ -2754,6 +2930,61 @@ class KrytenClient:
 
         kv = await get_kv_store(self._nats, bucket_name)
         return await kv_get_all(kv, parse_json=parse_json)
+
+    # Kryten-Robot State KV helpers
+
+    def _state_bucket_prefix(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+    ) -> str:
+        """Return the KV bucket prefix used by Kryten-Robot for channel state.
+
+        NOTE: Current Kryten-Robot implementation uses `kryten_{channel}` (domain is
+        not included). This helper centralizes that convention so downstream
+        services don't duplicate or guess.
+        """
+        _ = domain
+        return f"kryten_{channel.lower()}"
+
+    async def get_state_playlist_items(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Get the current playlist items from Kryten-Robot state KV."""
+        bucket = f"{self._state_bucket_prefix(channel, domain=domain)}_playlist"
+        items = await self.kv_get(bucket, "items", default=[], parse_json=True)
+        return items if isinstance(items, list) else []
+
+    async def get_state_current_media(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Get currently playing media from Kryten-Robot state KV."""
+        bucket = f"{self._state_bucket_prefix(channel, domain=domain)}_playlist"
+        current = await self.kv_get(bucket, "current", default=None, parse_json=True)
+        return current if isinstance(current, dict) else None
+
+    async def get_state_current_uid(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+    ) -> str | None:
+        """Get UID of the currently playing item (if any) from state KV."""
+        current = await self.get_state_current_media(channel, domain=domain)
+        if not current:
+            return None
+        uid = current.get("uid")
+        if uid is None:
+            return None
+        uid_str = str(uid).strip()
+        return uid_str or None
 
     async def subscribe_request_reply(
         self,
@@ -3056,6 +3287,62 @@ class KrytenClient:
             raise ValueError("Invalid response format: expected config dictionary")
 
         return config
+
+    async def get_services(self, timeout: float = 5.0) -> dict[str, Any]:
+        """Get list of registered microservices from Kryten-Robot.
+
+        Queries kryten.robot.command with system.services command to retrieve
+        information about all microservices that have registered with the robot,
+        including their version, hostname, health/metrics endpoints, and heartbeat status.
+
+        Args:
+            timeout: Timeout in seconds for the request
+
+        Returns:
+            Dictionary containing:
+                - services (list): List of service dictionaries with:
+                    - name (str): Service name (e.g., "userstats", "moderator")
+                    - version (str): Service version
+                    - hostname (str): Host running the service
+                    - first_seen (str): ISO8601 timestamp when first discovered
+                    - last_heartbeat (str): ISO8601 timestamp of most recent heartbeat
+                    - seconds_since_heartbeat (float): Seconds since last heartbeat
+                    - is_stale (bool): True if no heartbeat in 90+ seconds
+                    - health_url (str|None): Full URL for health endpoint
+                    - metrics_url (str|None): Full URL for metrics endpoint
+                - count (int): Total number of registered services
+                - active_count (int): Number of non-stale services
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response format is invalid
+
+        Example:
+            >>> services = await client.get_services()
+            >>> for svc in services["services"]:
+            ...     status = "✓" if not svc["is_stale"] else "✗"
+            ...     print(f"{status} {svc['name']} v{svc['version']}")
+            ...     if svc["health_url"]:
+            ...         print(f"    Health: {svc['health_url']}")
+        """
+        request = {
+            "service": "robot",
+            "command": "system.services"
+        }
+
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get services: {error}")
+
+        services = response.get("data", {})
+
+        if not isinstance(services, dict):
+            raise ValueError("Invalid response format: expected services dictionary")
+
+        return services
 
     async def ping(self, timeout: float = 2.0) -> dict[str, Any]:
         """Perform lightweight alive check on Kryten-Robot.

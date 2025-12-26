@@ -21,10 +21,15 @@ Example:
     ...     await client.run()
 """
 
-__version__ = "0.9.6"
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("kryten-py")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 
 from kryten.client import KrytenClient
-from kryten.config import ChannelConfig, KrytenConfig, NatsConfig, ServiceConfig
+from kryten.config import ChannelConfig, KrytenConfig, MetricsConfig, NatsConfig, ServiceConfig
 from kryten.exceptions import (
     HandlerError,
     KrytenConnectionError,
@@ -36,6 +41,7 @@ from kryten.exceptions import (
 from kryten.health import ChannelInfo, HealthStatus
 from kryten.kv_store import (
     get_kv_store,
+    get_or_create_kv_store,
     kv_delete,
     kv_get,
     kv_get_all,
@@ -54,8 +60,6 @@ from kryten.models import (
     UserLeaveEvent,
 )
 
-__version__ = "0.8.1"
-
 __all__ = [
     # Core client
     "KrytenClient",
@@ -65,6 +69,7 @@ __all__ = [
     "NatsConfig",
     "ChannelConfig",
     "ServiceConfig",
+    "MetricsConfig",
     # Event models
     "RawEvent",
     "ChatMessageEvent",
@@ -82,6 +87,7 @@ __all__ = [
     "SimpleMetricsServer",
     # KeyValue store helpers
     "get_kv_store",
+    "get_or_create_kv_store",
     "kv_get",
     "kv_put",
     "kv_delete",

@@ -60,6 +60,10 @@ class LifecycleEventPublisher:
         heartbeat_interval: int = 30,
         enable_heartbeat: bool = True,
         enable_discovery: bool = True,
+        health_port: int | None = None,
+        health_path: str = "/health",
+        metrics_port: int | None = None,
+        metrics_path: str = "/metrics",
     ) -> None:
         """Initialize lifecycle event publisher.
 
@@ -71,6 +75,10 @@ class LifecycleEventPublisher:
             heartbeat_interval: Seconds between heartbeat publishes.
             enable_heartbeat: Whether to publish periodic heartbeats.
             enable_discovery: Whether to respond to discovery polls.
+            health_port: Port for health endpoint (e.g., 8080).
+            health_path: Path for health endpoint (default: /health).
+            metrics_port: Port for metrics endpoint (defaults to health_port).
+            metrics_path: Path for metrics endpoint (default: /metrics).
         """
         self._service_name = service_name
         self._nats = nats_client
@@ -93,6 +101,15 @@ class LifecycleEventPublisher:
 
         # Custom metadata for heartbeats/discovery
         self._custom_metadata: dict[str, Any] = {}
+
+        # Auto-configure endpoints if provided
+        if health_port is not None or metrics_port is not None:
+            self.set_endpoints(
+                health_port=health_port,
+                health_path=health_path,
+                metrics_port=metrics_port,
+                metrics_path=metrics_path,
+            )
 
     @property
     def is_running(self) -> bool:
@@ -248,13 +265,55 @@ class LifecycleEventPublisher:
         if self._start_time:
             uptime = (datetime.now(timezone.utc) - self._start_time).total_seconds()
 
-        return {
+        payload = {
             "service": self._service_name,
             "version": self._version,
             "hostname": self._hostname,
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "uptime_seconds": uptime,
         }
+        
+        # Include custom metadata (health/metrics endpoints, etc.)
+        if self._custom_metadata:
+            payload["metadata"] = self._custom_metadata.copy()
+        
+        return payload
+
+    def set_endpoints(
+        self,
+        health_port: int | None = None,
+        metrics_port: int | None = None,
+        health_path: str = "/health",
+        metrics_path: str = "/metrics",
+    ) -> None:
+        """Set health and metrics endpoint information for service discovery.
+        
+        This information is included in startup and heartbeat events, allowing
+        other services to discover how to reach this service's endpoints.
+        
+        Args:
+            health_port: Port for health endpoint (e.g., 8080)
+            metrics_port: Port for metrics endpoint (e.g., 9090)
+            health_path: Path for health endpoint (default: /health)
+            metrics_path: Path for metrics endpoint (default: /metrics)
+        
+        Examples:
+            >>> lifecycle.set_endpoints(health_port=8080, metrics_port=9090)
+            >>> lifecycle.set_endpoints(health_port=28282)  # Same port for both
+        """
+        endpoints = {}
+        if health_port is not None:
+            endpoints["health"] = {
+                "port": health_port,
+                "path": health_path,
+            }
+        if metrics_port is not None:
+            endpoints["metrics"] = {
+                "port": metrics_port,
+                "path": metrics_path,
+            }
+        if endpoints:
+            self._custom_metadata["endpoints"] = endpoints
 
     async def publish_startup(self, **extra_data: Any) -> None:
         """Publish service startup event.

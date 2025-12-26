@@ -77,6 +77,23 @@ class ChannelConfig(BaseModel):
         return v.strip()
 
 
+class MetricsConfig(BaseModel):
+    """Metrics server configuration.
+
+    Attributes:
+        port: Port for metrics/health server
+        health_path: Path for health endpoint
+        metrics_path: Path for metrics endpoint
+
+    Examples:
+        >>> metrics = MetricsConfig(port=28282)
+    """
+
+    port: int = Field(..., description="Port for metrics/health server", ge=1, le=65535)
+    health_path: str = Field("/health", description="Path for health endpoint")
+    metrics_path: str = Field("/metrics", description="Path for metrics endpoint")
+
+
 class ServiceConfig(BaseModel):
     """Service identity and lifecycle configuration.
 
@@ -87,9 +104,19 @@ class ServiceConfig(BaseModel):
         enable_heartbeat: Whether to publish periodic heartbeats
         heartbeat_interval: Heartbeat interval in seconds
         enable_discovery: Whether to respond to service discovery polls
+        health_port: Port for health endpoint (e.g., 8080)
+        health_path: Path for health endpoint (default: /health)
+        metrics_port: Port for metrics endpoint (defaults to health_port)
+        metrics_path: Path for metrics endpoint (default: /metrics)
 
     Examples:
         >>> service = ServiceConfig(name="userstats", version="1.0.0")
+        >>> service = ServiceConfig(
+        ...     name="userstats",
+        ...     version="1.0.0",
+        ...     health_port=28282,
+        ...     metrics_port=28282
+        ... )
     """
 
     name: str = Field(..., description="Service name for lifecycle events")
@@ -98,6 +125,10 @@ class ServiceConfig(BaseModel):
     enable_heartbeat: bool = Field(True, description="Publish periodic heartbeats")
     heartbeat_interval: int = Field(30, description="Heartbeat interval in seconds", ge=5, le=300)
     enable_discovery: bool = Field(True, description="Respond to service discovery polls")
+    health_port: int | None = Field(None, description="Port for health endpoint")
+    health_path: str = Field("/health", description="Path for health endpoint")
+    metrics_port: int | None = Field(None, description="Port for metrics endpoint (defaults to health_port)")
+    metrics_path: str = Field("/metrics", description="Path for metrics endpoint")
 
     @field_validator("name")
     @classmethod
@@ -133,6 +164,7 @@ class KrytenConfig(BaseModel):
     nats: NatsConfig = Field(..., description="NATS connection settings")
     channels: list[ChannelConfig] = Field(..., description="List of CyTube channels to connect to")
     service: ServiceConfig | None = Field(None, description="Service identity and lifecycle settings")
+    metrics: MetricsConfig | None = Field(None, description="Metrics server configuration (auto-populates service endpoints)")
     retry_attempts: int = Field(3, description="Command retry attempts", ge=0, le=10)
     retry_delay: float = Field(1.0, description="Initial retry delay in seconds", ge=0.1)
     handler_timeout: float = Field(30.0, description="Max handler execution time", ge=1.0)

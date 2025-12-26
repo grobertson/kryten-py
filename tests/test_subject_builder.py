@@ -80,14 +80,16 @@ def test_build_event_subject():
 
 def test_build_command_subject():
     """Test building command subject."""
-    subject = build_command_subject("cytu.be", "lounge", "chat")
-    assert subject == "kryten.commands.cytube.lounge.chat"
+    # New signature: build_command_subject(service, domain="", channel="", action="")
+    # We pass "robot" as service
+    subject = build_command_subject("robot")
+    assert subject == "kryten.command.robot"
 
 
 def test_build_command_subject_sanitizes():
     """Test command subject sanitization."""
-    subject = build_command_subject("Cytu.BE", "Test Channel", "ChatMsg")
-    assert subject == "kryten.commands.cytube.test-channel.chatmsg"
+    subject = build_command_subject("My Service")
+    assert subject == "kryten.command.my-service"
 
 
 def test_parse_subject_basic():

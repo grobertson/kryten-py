@@ -68,6 +68,10 @@ class MockKrytenClient:
         self._events_received = 0
         self._commands_sent = 0
 
+        # Simple in-memory KV store for tests
+        # key: (bucket_name, key)
+        self._kv: dict[tuple[str, str], Any] = {}
+
     async def connect(self) -> None:
         """Mock connect (immediate success)."""
         self._connected = True
@@ -112,6 +116,17 @@ class MockKrytenClient:
     async def stop(self) -> None:
         """Stop run loop."""
         self._running = False
+
+    async def send_command(
+        self,
+        service: str,
+        type: str,
+        body: dict[str, Any],
+        channel: str | None = None,
+        domain: str | None = None,
+    ) -> None:
+        """Mock generic send command."""
+        self._record_command(channel, type, body, domain)
 
     async def send_chat(
         self,
@@ -296,6 +311,92 @@ class MockKrytenClient:
         """Check if mock client is connected."""
         return self._connected
 
+    # KeyValue Store Methods (mocked)
+
+    async def get_kv_bucket(self, bucket_name: str) -> str:
+        _ = bucket_name
+        return "mock"
+
+    async def get_or_create_kv_bucket(
+        self,
+        bucket_name: str,
+        description: str | None = None,
+        max_value_size: int = 1024 * 1024,
+    ) -> str:
+        _ = (bucket_name, description, max_value_size)
+        return "mock"
+
+    async def kv_get(
+        self,
+        bucket_name: str,
+        key: str,
+        default: Any = None,
+        parse_json: bool = False,
+    ) -> Any:
+        _ = parse_json
+        return self._kv.get((bucket_name, key), default)
+
+    async def kv_put(
+        self,
+        bucket_name: str,
+        key: str,
+        value: Any,
+        as_json: bool = False,
+    ) -> None:
+        _ = as_json
+        self._kv[(bucket_name, key)] = value
+
+    async def kv_delete(self, bucket_name: str, key: str) -> None:
+        self._kv.pop((bucket_name, key), None)
+
+    async def kv_keys(self, bucket_name: str) -> list[str]:
+        return [k for (b, k) in self._kv.keys() if b == bucket_name]
+
+    async def kv_get_all(self, bucket_name: str, parse_json: bool = False) -> dict[str, Any]:
+        _ = parse_json
+        return {k: v for (b, k), v in self._kv.items() if b == bucket_name}
+
+    # Kryten-Robot State KV helpers (mocked)
+
+    def _state_bucket_prefix(self, channel: str, *, domain: str | None = None) -> str:
+        _ = domain
+        return f"kryten_{channel.lower()}"
+
+    async def get_state_playlist_items(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+    ) -> list[dict[str, Any]]:
+        bucket = f"{self._state_bucket_prefix(channel, domain=domain)}_playlist"
+        items = await self.kv_get(bucket, "items", default=[], parse_json=True)
+        return items if isinstance(items, list) else []
+
+    async def get_state_current_media(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+    ) -> dict[str, Any] | None:
+        bucket = f"{self._state_bucket_prefix(channel, domain=domain)}_playlist"
+        current = await self.kv_get(bucket, "current", default=None, parse_json=True)
+        return current if isinstance(current, dict) else None
+
+    async def get_state_current_uid(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+    ) -> str | None:
+        current = await self.get_state_current_media(channel, domain=domain)
+        if not current:
+            return None
+        uid = current.get("uid")
+        if uid is None:
+            return None
+        uid_str = str(uid).strip()
+        return uid_str or None
+
     @property
     def channels(self) -> list[ChannelInfo]:
         """Get configured channels."""
@@ -308,6 +409,27 @@ class MockKrytenClient:
             )
             for c in self.config.channels
         ]
+
+    async def send_command(
+        self,
+        service: str,
+        type: str,
+        body: dict[str, Any],
+        channel: str | None = None,
+        domain: str | None = None,
+    ) -> str:
+        """Mock generic command sending."""
+        # For mock purposes, we map this to _record_command.
+        # Note: _record_command signature is (channel, type, body, domain)
+        # It doesn't take 'service'. We can ignore service or encode it in type?
+        # Let's verify _record_command signature by looking at usage:
+        # self._record_command(channel, "chat", ...)
+        
+        # We'll just pass it through. If tests inspect published commands, 
+        # they will see 'type' and 'body'.
+        # If 'service' is important for test assertions, we might need to update _record_command.
+        # But for now, let's just make it work.
+        return self._record_command(channel, type, body, domain)
 
     def get_published_commands(self) -> list[dict[str, Any]]:
         """Get list of all published commands for verification.

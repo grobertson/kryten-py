@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.2] - 2025-12-26
+
+### Fixed
+- Added `send_command` method to `MockKrytenClient` to match `KrytenClient` interface.
+
+## [0.10.1] - Unreleased
+
+### Added
+
+- **Service Discovery Endpoints**: `LifecycleEventPublisher.set_endpoints()` method
+  - Allows services to register health and metrics endpoints
+  - Endpoint info included in startup and heartbeat events
+  - Enables `kryten system services` command to show service URLs
+
+- **Get Services API**: `KrytenClient.get_services()` method
+  - Query registered microservices from kryten-robot
+  - Returns service info including version, hostname, endpoints, heartbeat status
+
+### Fixed
+
+- **Custom Metadata in Payloads**: `_build_base_payload()` now includes custom metadata
+  - Previously `set_metadata()` and `update_metadata()` values weren't sent
+
+## [0.9.7] - 2025-07-27
+
+### Fixed
+
+- **KV Store Config Conflict**: `get_kv_store()` no longer attempts to create buckets
+  - Buckets are created by kryten-robot with specific configuration (max_value_size, etc.)
+  - Creating buckets with default config caused "stream name already in use with a different configuration" errors
+  - Now raises an exception with clear message if bucket doesn't exist
+
 ## [0.9.4] - 2025-12-13
 
 ### Changed

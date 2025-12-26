@@ -63,6 +63,15 @@ poetry install
 pip install -e ".[all]"
 ```
 
+## Documentation
+
+- **[Command Protocol](COMMAND_PROTOCOL.md)** - Guide to sending commands (READ THIS FIRST)
+- **[Library Reference](LIBRARY_REFERENCE.md)** - Comprehensive API guide
+- **[Deployment & Monitoring](DEPLOYMENT_AND_MONITORING.md)** - Service lifecycle, heartbeats, and metrics
+- **[State Management](STATE_MANAGEMENT.md)** - KV Store best practices
+- **[Error Handling](ERROR_HANDLING.md)** - Exceptions and retry logic
+- **[Examples](examples/)** - Complete code examples
+
 ## Quick Start
 
 ### Simple Echo Bot
@@ -87,9 +96,22 @@ async def main():
     }
     
     async with KrytenClient(config) as client:
+        # Listen for events (1-to-Many broadcast)
         @client.on("chatmsg")
         async def on_chat(event: ChatMessageEvent):
             """Echo user messages."""
+            print(f"Chat: {event.username}: {event.message}")
+            
+            # Send commands (1-to-1 direct)
+            if event.message.startswith("!ping"):
+                await client.send_command(
+                    service="robot",
+                    type="say",
+                    body=f"Pong! {event.username}"
+                )
+
+        await client.run()
+```
             if event.username != "MyBot":  # Don't echo ourselves
                 await client.send_chat(
                     event.channel,
@@ -288,6 +310,9 @@ await lifecycle.publish_group_restart(
     delay_seconds=30
 )
 # Subject: kryten.lifecycle.group.restart
+
+# Handle restart requests from other services
+client.on_group_restart(handle_restart)
 ```
 
 ### Monitoring Lifecycle Events
@@ -562,6 +587,8 @@ Your Bot/Service
 ```
 
 ## API Reference
+
+> **Note:** For a complete API reference including all methods, parameters, and exceptions, see [LIBRARY_REFERENCE.md](LIBRARY_REFERENCE.md).
 
 ### KrytenClient
 

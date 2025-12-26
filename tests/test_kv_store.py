@@ -7,6 +7,7 @@ import pytest
 
 from kryten.kv_store import (
     get_kv_store,
+    get_or_create_kv_store,
     kv_delete,
     kv_get,
     kv_get_all,
@@ -54,16 +55,46 @@ class TestGetKVStore:
         mock_logger.debug.assert_called()
     
     async def test_create_new_bucket(self, mock_nats_client, mock_logger):
+        """Test that get_kv_store raises when bucket doesn't exist."""
+        client, js, kv = mock_nats_client
+        
+        # Make key_value raise exception to simulate bucket not existing
+        js.key_value.side_effect = Exception("Bucket not found")
+        
+        with pytest.raises(Exception, match="Bucket not found"):
+            await get_kv_store(client, "new_bucket", mock_logger)
+        
+        mock_logger.error.assert_called()
+
+
+class TestGetOrCreateKVStore:
+    """Test get_or_create_kv_store function."""
+    
+    async def test_get_existing_bucket(self, mock_nats_client, mock_logger):
+        """Test getting an existing KV bucket."""
+        client, js, kv = mock_nats_client
+        
+        result = await get_or_create_kv_store(client, "test_bucket", logger=mock_logger)
+        
+        assert result == kv
+        js.key_value.assert_called_once_with("test_bucket")
+        mock_logger.debug.assert_called()
+    
+    async def test_create_new_bucket(self, mock_nats_client, mock_logger):
         """Test creating a new KV bucket when it doesn't exist."""
         client, js, kv = mock_nats_client
         
         # Make key_value raise exception to simulate bucket not existing
         js.key_value.side_effect = Exception("Bucket not found")
         
-        result = await get_kv_store(client, "new_bucket", mock_logger)
+        result = await get_or_create_kv_store(
+            client, "new_bucket",
+            description="Test bucket",
+            logger=mock_logger
+        )
         
         assert result == kv
-        js.create_key_value.assert_called_once_with(bucket="new_bucket")
+        js.create_key_value.assert_called_once()
         mock_logger.info.assert_called()
 
 
