@@ -2144,7 +2144,7 @@ class KrytenClient:
 
     async def _setup_subscriptions(self) -> None:
         """Set up NATS subscriptions for all configured channels."""
-        if self._nats is None:
+        if self.__nats is None:
             raise KrytenConnectionError("NATS client not initialized")
 
         for channel_config in self.config.channels:
@@ -2156,7 +2156,7 @@ class KrytenClient:
 
             self.logger.info(f"Subscribing to: {subject}")
 
-            sub = await self._nats.subscribe(subject, cb=self._on_message)
+            sub = await self.__nats.subscribe(subject, cb=self._on_message)
             self._subscriptions.append(sub)
 
     async def _on_message(self, msg: Any) -> None:
@@ -2411,7 +2411,7 @@ class KrytenClient:
             KrytenConnectionError: If not connected
             PublishError: If publish fails
         """
-        if not self._connected or self._nats is None:
+        if not self._connected or self.__nats is None:
             raise KrytenConnectionError("Not connected to NATS")
 
         # Resolve domain (use first configured channel's domain if not specified)
@@ -2434,7 +2434,7 @@ class KrytenClient:
         # Publish with retry
         for attempt in range(self.config.retry_attempts + 1):
             try:
-                await self._nats.publish(subject, json.dumps(payload).encode("utf-8"))
+                await self.__nats.publish(subject, json.dumps(payload).encode("utf-8"))
 
                 self._commands_sent += 1
 
@@ -2537,7 +2537,7 @@ class KrytenClient:
             ...     profile = user.get('profile', {})
             ...     print(f"Avatar: {profile.get('image')}")
         """
-        if not self._nats:
+        if not self.__nats:
             raise KrytenConnectionError("Not connected to NATS")
 
         # Resolve domain
@@ -2555,7 +2555,7 @@ class KrytenClient:
         }
 
         try:
-            response = await self._nats.request(
+            response = await self.__nats.request(
                 subject=subject,
                 payload=json.dumps(request).encode(),
                 timeout=timeout
@@ -2600,7 +2600,7 @@ class KrytenClient:
             ...     print(f"Avatar: {profile.get('image')}")
             ...     print(f"Bio: {profile.get('text')}")
         """
-        if not self._nats:
+        if not self.__nats:
             raise KrytenConnectionError("Not connected to NATS")
 
         # Resolve domain
@@ -2618,7 +2618,7 @@ class KrytenClient:
         }
 
         try:
-            response = await self._nats.request(
+            response = await self.__nats.request(
                 subject=subject,
                 payload=json.dumps(request).encode(),
                 timeout=timeout
@@ -2660,7 +2660,7 @@ class KrytenClient:
             >>> for username, profile in profiles.items():
             ...     print(f"{username}: {profile.get('image')}")
         """
-        if not self._nats:
+        if not self.__nats:
             raise KrytenConnectionError("Not connected to NATS")
 
         # Resolve domain
@@ -2677,7 +2677,7 @@ class KrytenClient:
         }
 
         try:
-            response = await self._nats.request(
+            response = await self.__nats.request(
                 subject=subject,
                 payload=json.dumps(request).encode(),
                 timeout=timeout
@@ -2732,7 +2732,7 @@ class KrytenClient:
             ...     # Bot has moderator+ access
             ...     await client.add_media("lounge", "yt", "dQw4w9WgXcQ")
         """
-        if not self._nats:
+        if not self.__nats:
             return {"success": False, "error": "Not connected to NATS"}
 
         # Resolve domain
@@ -2745,7 +2745,7 @@ class KrytenClient:
         subject = f"cytube.user_level.{domain.lower()}.{channel.lower()}"
 
         try:
-            response = await self._nats.request(
+            response = await self.__nats.request(
                 subject=subject,
                 payload=json.dumps({}).encode(),
                 timeout=timeout
@@ -2778,10 +2778,10 @@ class KrytenClient:
         Example:
             >>> kv = await client.get_kv_bucket("my-state")
         """
-        if not self._nats:
+        if not self.__nats:
             raise KrytenConnectionError("Not connected to NATS")
 
-        return await get_kv_store(self._nats, bucket_name)
+        return await get_kv_store(self.__nats, bucket_name)
 
     async def get_or_create_kv_bucket(
         self,
@@ -2811,11 +2811,11 @@ class KrytenClient:
             ...     description="My service state"
             ... )
         """
-        if not self._nats:
+        if not self.__nats:
             raise KrytenConnectionError("Not connected to NATS")
 
         return await get_or_create_kv_store(
-            self._nats,
+            self.__nats,
             bucket_name,
             description=description,
             max_value_size=max_value_size,
@@ -2843,10 +2843,10 @@ class KrytenClient:
         Example:
             >>> users = await client.kv_get("cytube_cytu_be_lounge_userlist", "users", default=[], parse_json=True)
         """
-        if not self._nats:
+        if not self.__nats:
             raise KrytenConnectionError("Not connected to NATS")
 
-        kv = await get_kv_store(self._nats, bucket_name)
+        kv = await get_kv_store(self.__nats, bucket_name)
         return await kv_get(kv, key, default=default, parse_json=parse_json)
 
     async def kv_put(
@@ -2868,10 +2868,10 @@ class KrytenClient:
             >>> await client.kv_put("my-state", "counter", 42)
             >>> await client.kv_put("my-state", "config", {"setting": "value"}, as_json=True)
         """
-        if not self._nats:
+        if not self.__nats:
             raise KrytenConnectionError("Not connected to NATS")
 
-        kv = await get_kv_store(self._nats, bucket_name)
+        kv = await get_kv_store(self.__nats, bucket_name)
         await kv_put(kv, key, value, as_json=as_json)
 
     async def kv_delete(self, bucket_name: str, key: str) -> None:
@@ -2884,10 +2884,10 @@ class KrytenClient:
         Example:
             >>> await client.kv_delete("my-state", "old_key")
         """
-        if not self._nats:
+        if not self.__nats:
             raise KrytenConnectionError("Not connected to NATS")
 
-        kv = await get_kv_store(self._nats, bucket_name)
+        kv = await get_kv_store(self.__nats, bucket_name)
         await kv_delete(kv, key)
 
     async def kv_keys(self, bucket_name: str) -> list[str]:
@@ -2902,10 +2902,10 @@ class KrytenClient:
         Example:
             >>> all_keys = await client.kv_keys("my-state")
         """
-        if not self._nats:
+        if not self.__nats:
             raise KrytenConnectionError("Not connected to NATS")
 
-        kv = await get_kv_store(self._nats, bucket_name)
+        kv = await get_kv_store(self.__nats, bucket_name)
         return await kv_keys(kv)
 
     async def kv_get_all(
@@ -2925,10 +2925,10 @@ class KrytenClient:
         Example:
             >>> all_data = await client.kv_get_all("my-state", parse_json=True)
         """
-        if not self._nats:
+        if not self.__nats:
             raise KrytenConnectionError("Not connected to NATS")
 
-        kv = await get_kv_store(self._nats, bucket_name)
+        kv = await get_kv_store(self.__nats, bucket_name)
         return await kv_get_all(kv, parse_json=parse_json)
 
     # Kryten-Robot State KV helpers
@@ -3016,7 +3016,7 @@ class KrytenClient:
             ...     handle_query
             ... )
         """
-        if not self._nats:
+        if not self.__nats:
             raise KrytenConnectionError("Not connected to NATS")
 
         async def nats_handler(msg):
@@ -3030,22 +3030,22 @@ class KrytenClient:
 
                 # Send reply
                 reply_payload = json.dumps(response).encode('utf-8')
-                await self._nats.publish(msg.reply, reply_payload)
+                await self.__nats.publish(msg.reply, reply_payload)
 
             except json.JSONDecodeError as e:
                 self.logger.error("Invalid JSON in request: %s", e)
                 error_response = json.dumps({"error": "Invalid JSON"}).encode('utf-8')
                 if msg.reply:
-                    await self._nats.publish(msg.reply, error_response)
+                    await self.__nats.publish(msg.reply, error_response)
             except Exception:  # noqa: BLE001
                 self.logger.exception("Error in request handler")
                 # Send error response
                 error_response = json.dumps({"error": "Internal error"}).encode('utf-8')
                 if msg.reply:
-                    await self._nats.publish(msg.reply, error_response)
+                    await self.__nats.publish(msg.reply, error_response)
 
         # Subscribe with our wrapper
-        sub = await self._nats.subscribe(subject, cb=nats_handler)
+        sub = await self.__nats.subscribe(subject, cb=nats_handler)
         self._subscriptions.append(sub)
         self.logger.info("Subscribed to request-reply subject: %s", subject)
 
@@ -3078,12 +3078,12 @@ class KrytenClient:
             ...     timeout=2.0
             ... )
         """
-        if not self._nats:
+        if not self.__nats:
             raise KrytenConnectionError("Not connected to NATS")
 
         try:
             payload = json.dumps(request).encode('utf-8')
-            response = await self._nats.request(subject, payload, timeout=timeout)
+            response = await self.__nats.request(subject, payload, timeout=timeout)
             return json.loads(response.data.decode('utf-8'))
         except asyncio.TimeoutError as e:
             raise TimeoutError(f"NATS request timeout on {subject}") from e
