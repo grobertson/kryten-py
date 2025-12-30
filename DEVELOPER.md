@@ -98,16 +98,16 @@ cd kryten-py
 curl -sSL https://install.python-poetry.org | python3 -
 
 # Install dependencies
-poetry install
+uv sync
 
 # Activate virtual environment
 poetry shell
 
 # Verify installation
-poetry run pytest
-poetry run mypy src/kryten
-poetry run ruff check src
-poetry run black --check src
+uv run pytest
+uv run mypy src/kryten
+uv run ruff check src
+uv run black --check src
 ```
 
 ### IDE Setup
@@ -487,25 +487,25 @@ tests/
 
 ```bash
 # All tests
-poetry run pytest
+uv run pytest
 
 # With coverage
-poetry run pytest --cov=kryten --cov-report=html
+uv run pytest --cov=kryten --cov-report=html
 
 # Specific test file
-poetry run pytest tests/test_config.py
+uv run pytest tests/test_config.py
 
 # Specific test function
-poetry run pytest tests/test_config.py::test_nats_config_valid
+uv run pytest tests/test_config.py::test_nats_config_valid
 
 # Verbose output
-poetry run pytest -v
+uv run pytest -v
 
 # Stop on first failure
-poetry run pytest -x
+uv run pytest -x
 
 # Run in parallel (requires pytest-xdist)
-poetry run pytest -n auto
+uv run pytest -n auto
 ```
 
 ### Writing Tests
@@ -556,7 +556,7 @@ disallow_untyped_defs = true
 
 **Run**:
 ```bash
-poetry run mypy src/kryten
+uv run mypy src/kryten
 ```
 
 **Standards**:
@@ -577,10 +577,10 @@ select = ["E", "W", "F", "I", "B", "C4", "UP"]
 **Run**:
 ```bash
 # Check
-poetry run ruff check src
+uv run ruff check src
 
 # Auto-fix
-poetry run ruff check --fix src
+uv run ruff check --fix src
 ```
 
 **Rules**:
@@ -603,10 +603,10 @@ target-version = ["py311"]
 **Run**:
 ```bash
 # Check
-poetry run black --check src
+uv run black --check src
 
 # Format
-poetry run black src
+uv run black src
 ```
 
 **Standards**:
@@ -624,16 +624,16 @@ set -e
 echo "Running pre-commit checks..."
 
 # Format check
-poetry run black --check src tests
+uv run black --check src tests
 
 # Lint
-poetry run ruff check src tests
+uv run ruff check src tests
 
 # Type check
-poetry run mypy src/kryten
+uv run mypy src/kryten
 
 # Tests
-poetry run pytest
+uv run pytest
 
 echo "All checks passed!"
 ```
@@ -666,15 +666,15 @@ __version__ = "0.2.0"
 
 2. **Run Full Test Suite**
    ```bash
-   poetry run pytest --cov=kryten
-   poetry run mypy src/kryten
-   poetry run ruff check src
-   poetry run black --check src
+   uv run pytest --cov=kryten
+   uv run mypy src/kryten
+   uv run ruff check src
+   uv run black --check src
    ```
 
 3. **Build Package**
    ```bash
-   poetry build
+   uv build
    ```
 
 4. **Test Installation**
@@ -692,7 +692,7 @@ __version__ = "0.2.0"
 
 6. **Publish to PyPI**
    ```bash
-   poetry publish
+   uv publish
    ```
 
 7. **GitHub Release**
@@ -741,10 +741,10 @@ __version__ = "0.2.0"
 
 4. **Run Quality Checks**
    ```bash
-   poetry run pytest
-   poetry run mypy src/kryten
-   poetry run ruff check src
-   poetry run black src
+   uv run pytest
+   uv run mypy src/kryten
+   uv run ruff check src
+   uv run black src
    ```
 
 5. **Commit Changes**
@@ -845,7 +845,7 @@ Fixes #38
 ModuleNotFoundError: No module named 'kryten'
 
 # Solution
-poetry install  # Reinstall in development mode
+uv sync  # Reinstall in development mode
 ```
 
 **2. Type Checking Fails on Callable**

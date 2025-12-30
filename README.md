@@ -57,7 +57,7 @@ git clone https://github.com/yourusername/kryten-py.git
 cd kryten-py
 
 # Install with Poetry
-poetry install
+uv sync
 
 # Or with pip in editable mode
 pip install -e ".[all]"
