@@ -83,13 +83,13 @@ def test_build_command_subject():
     # New signature: build_command_subject(service, domain="", channel="", action="")
     # We pass "robot" as service
     subject = build_command_subject("robot")
-    assert subject == "kryten.command.robot"
+    assert subject == "kryten.robot.command"
 
 
 def test_build_command_subject_sanitizes():
     """Test command subject sanitization."""
     subject = build_command_subject("My Service")
-    assert subject == "kryten.command.my-service"
+    assert subject == "kryten.my-service.command"
 
 
 def test_parse_subject_basic():

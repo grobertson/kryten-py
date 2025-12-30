@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.5] - 2025-12-28
+
+### Changed
+- **Logging**: Improved NATS connection logging to include the list of configured servers.
+
+## [0.10.4] - 2025-12-28
+
+### Refactored
+- **Command Sending Architecture**: Replaced legacy `_send_command` with private `__send_command`.
+  - Enforces strict encapsulation of command sending logic.
+  - Returns `request_id` (UUID) for command tracking.
+  - Updates all dependent methods (`send_chat`, `send_pm`, `add_media`, etc.) to use the new private method.
+  - Ensures consistent subject building via `build_command_subject`.
+
 ## [0.10.3] - 2025-12-28
 
 ### Fixed

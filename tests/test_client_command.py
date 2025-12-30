@@ -37,7 +37,7 @@ async def test_send_command():
     assert payload["command"] == cmd_type # Changed from "type"
     assert payload["args"] == {"value": body} # Changed from "body"
     assert payload["meta"]["source"] == "test-service"
-    assert payload["meta"]["domain"] == "cytu.be" # Default
+    assert payload["meta"]["domain"] == "test.com" # Default from config
     assert payload["meta"]["channel"] == "lounge" # Default
 
 @pytest.mark.asyncio

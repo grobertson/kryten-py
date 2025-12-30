@@ -189,7 +189,7 @@ class KrytenClient:
                 await self._lifecycle.publish_startup()
 
             self.logger.info(
-                f"kryten-py v{__version__} connected to NATS",
+                f"kryten-py v{__version__} connected to NATS: {', '.join(self.config.nats.servers)}",
                 extra={"channels": [f"{c.domain}/{c.channel}" for c in self.config.channels]},
             )
 
@@ -522,9 +522,9 @@ class KrytenClient:
         service: str,
         type: str,
         body: Any,
-        domain: str = "cytu.be",
+        domain: str | None = None,
         channel: str = "lounge",
-    ) -> None:
+    ) -> str:
         """Send a command to a specific service.
 
         This is a public wrapper around __send_command for external usage (e.g. by kryten-playlist).
@@ -536,20 +536,23 @@ class KrytenClient:
             domain: Target domain (default: cytu.be)
             channel: Target channel (default: lounge)
 
+        Returns:
+            Request ID (UUID string)
+
         Raises:
             KrytenConnectionError: If not connected
             PublishError: If publishing fails
         """
-        await self.__send_command(service, type, body, domain, channel)
+        return await self.__send_command(service, type, body, domain, channel)
 
     async def __send_command(
         self,
         service: str,
         type: str,
         body: Any,
-        domain: str = "cytu.be",
+        domain: str | None = None,
         channel: str = "lounge",
-    ) -> None:
+    ) -> str:
         """Send a command to a specific service.
 
         Args:
@@ -559,12 +562,22 @@ class KrytenClient:
             domain: Target domain (default: cytu.be)
             channel: Target channel (default: lounge)
 
+        Returns:
+            Request ID (UUID string)
+
         Raises:
             KrytenConnectionError: If not connected
             PublishError: If publishing fails
         """
         if not self._connected or self.__nats is None:
             raise KrytenConnectionError("Not connected to NATS")
+
+        # Resolve domain
+        if domain is None:
+            if self.config.channels:
+                domain = self.config.channels[0].domain
+            else:
+                domain = "cytu.be"
 
         subject = build_command_subject(service)
 
@@ -575,16 +588,8 @@ class KrytenClient:
         #   "meta": { ... }
         # }
         
-        # If body is a primitive (str), wrap it if the command expects it.
-        # But 'body' is generic. The protocol says 'args' is a dict.
-        # If 'body' is passed as a string (e.g. for 'say'), we need to know the key.
-        # However, for generic 'send_command', we should probably expect 'body' to be the 'args' dict
-        # or handle it upstream. 
-        
-        # In `send_chat`, I passed `body=message`. Robot expects `args.message`.
-        # So I should change `send_chat` to pass `body={"message": message}`.
-        
         args = body if isinstance(body, dict) else {"value": body}
+        request_id = str(uuid.uuid4())
 
         payload = {
             "command": type,
@@ -594,7 +599,7 @@ class KrytenClient:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "domain": domain,
                 "channel": channel,
-                "request_id": str(uuid.uuid4())
+                "request_id": request_id
             },
         }
 
@@ -606,6 +611,7 @@ class KrytenClient:
                 f"Sent command to {service}: {type}",
                 extra={"subject": subject, "payload_size": len(data)},
             )
+            return request_id
         except Exception as e:
             self._errors += 1
             self.logger.error(f"Failed to send command: {e}", exc_info=True)
@@ -635,17 +641,13 @@ class KrytenClient:
         Examples:
             >>> await client.send_chat("lounge", "Hello!")
         """
-        # Ensure domain is set
-        target_domain = domain or self.config.channels[0].domain
-        
-        await self.__send_command(
+        return await self.__send_command(
             service="robot",
             type="say",
             body={"message": message},
-            domain=target_domain,
+            domain=domain,
             channel=channel
         )
-        return "" # send_command returns None now
 
     async def send_pm(
         self,
@@ -656,16 +658,13 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Send private message to user."""
-        target_domain = domain or self.config.channels[0].domain
-        
-        await self.__send_command(
+        return await self.__send_command(
             service="robot",
             type="pm",
-            body={"to": username, "msg": message}, # Handler expects args dict
-            domain=target_domain,
+            body={"to": username, "msg": message},
+            domain=domain,
             channel=channel
         )
-        return ""
 
     # Command Publishing - Playlist
 
@@ -720,10 +719,10 @@ class KrytenClient:
         Returns:
             Correlation ID
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="delete",
-            data={"uid": uid},
+            type="delete",
+            body={"uid": uid},
             domain=domain,
         )
 
@@ -736,10 +735,10 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Move media to new position in playlist."""
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="move",
-            data={"from": uid, "after": position},
+            type="move",
+            body={"from": uid, "after": position},
             domain=domain,
         )
 
@@ -751,10 +750,10 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Jump to specific media in playlist."""
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="jump",
-            data={"uid": uid},
+            type="jump",
+            body={"uid": uid},
             domain=domain,
         )
 
@@ -765,10 +764,10 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Clear entire playlist."""
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="clear",
-            data={},
+            type="clear",
+            body={},
             domain=domain,
         )
 
@@ -779,10 +778,10 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Shuffle playlist order."""
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="shuffle",
-            data={},
+            type="shuffle",
+            body={},
             domain=domain,
         )
 
@@ -795,10 +794,10 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Set temporary flag on playlist item."""
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="settemp",
-            data={"uid": uid, "temp": is_temp},
+            type="settemp",
+            body={"uid": uid, "temp": is_temp},
             domain=domain,
         )
 
@@ -811,10 +810,10 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Pause current media."""
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="pause",
-            data={},
+            type="pause",
+            body={},
             domain=domain,
         )
 
@@ -825,10 +824,10 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Resume playback."""
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="play",
-            data={},
+            type="play",
+            body={},
             domain=domain,
         )
 
@@ -840,10 +839,10 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Seek to specific time in current media."""
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="seek",
-            data={"time": time_seconds},
+            type="seek",
+            body={"time": time_seconds},
             domain=domain,
         )
 
@@ -861,10 +860,10 @@ class KrytenClient:
         data: dict[str, Any] = {"name": username}
         if reason:
             data["reason"] = reason
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="kick",
-            data=data,
+            type="kick",
+            body=data,
             domain=domain,
         )
 
@@ -880,10 +879,10 @@ class KrytenClient:
         data: dict[str, Any] = {"name": username}
         if reason:
             data["reason"] = reason
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="ban",
-            data=data,
+            type="ban",
+            body=data,
             domain=domain,
         )
 
@@ -894,10 +893,10 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Vote to skip current media."""
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="voteskip",
-            data={},
+            type="voteskip",
+            body={},
             domain=domain,
         )
 
@@ -927,10 +926,10 @@ class KrytenClient:
             >>> await client.assign_leader("lounge", "alice")
             >>> await client.assign_leader("lounge", "")  # Remove leader
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="assignLeader",
-            data={"name": username},
+            type="assignLeader",
+            body={"name": username},
             domain=domain,
         )
 
@@ -958,10 +957,10 @@ class KrytenClient:
         Example:
             >>> await client.mute_user("lounge", "spammer")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="chat",
-            data={"message": f"/mute {username}"},
+            type="chat",
+            body={"message": f"/mute {username}"},
             domain=domain,
         )
 
@@ -991,10 +990,10 @@ class KrytenClient:
         Example:
             >>> await client.shadow_mute_user("lounge", "subtle_troll")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="chat",
-            data={"message": f"/smute {username}"},
+            type="chat",
+            body={"message": f"/smute {username}"},
             domain=domain,
         )
 
@@ -1020,10 +1019,10 @@ class KrytenClient:
         Example:
             >>> await client.unmute_user("lounge", "reformed_user")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="chat",
-            data={"message": f"/unmute {username}"},
+            type="chat",
+            body={"message": f"/unmute {username}"},
             domain=domain,
         )
 
@@ -1049,10 +1048,10 @@ class KrytenClient:
         Example:
             >>> await client.play_next("lounge")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="playNext",
-            data={},
+            type="playNext",
+            body={},
             domain=domain,
         )
 
@@ -1080,10 +1079,10 @@ class KrytenClient:
         Example:
             >>> await client.set_motd("lounge", "<h1>Welcome!</h1>")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="setMotd",
-            data={"motd": motd},
+            type="setMotd",
+            body={"motd": motd},
             domain=domain,
         )
 
@@ -1111,10 +1110,10 @@ class KrytenClient:
             >>> css_content = "body { background: #000; }"
             >>> await client.set_channel_css("lounge", css_content)
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="setChannelCSS",
-            data={"css": css},
+            type="setChannelCSS",
+            body={"css": css},
             domain=domain,
         )
 
@@ -1142,10 +1141,10 @@ class KrytenClient:
             >>> js_content = "console.log('Hello');"
             >>> await client.set_channel_js("lounge", js_content)
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="setChannelJS",
-            data={"js": js},
+            type="setChannelJS",
+            body={"js": js},
             domain=domain,
         )
 
@@ -1186,10 +1185,10 @@ class KrytenClient:
             >>> opts = {"allow_voteskip": True, "voteskip_ratio": 0.5}
             >>> await client.set_options("lounge", opts)
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="setOptions",
-            data={"options": options},
+            type="setOptions",
+            body={"options": options},
             domain=domain,
         )
 
@@ -1226,10 +1225,10 @@ class KrytenClient:
             >>> perms = {"kick": 2, "ban": 3}
             >>> await client.set_permissions("lounge", perms)
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="setPermissions",
-            data={"permissions": permissions},
+            type="setPermissions",
+            body={"permissions": permissions},
             domain=domain,
         )
 
@@ -1259,10 +1258,10 @@ class KrytenClient:
         Example:
             >>> await client.update_emote("lounge", "CustomEmote", "abc123", "imgur")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="updateEmote",
-            data={"name": name, "image": image, "source": source},
+            type="updateEmote",
+            body={"name": name, "image": image, "source": source},
             domain=domain,
         )
 
@@ -1288,10 +1287,10 @@ class KrytenClient:
         Example:
             >>> await client.remove_emote("lounge", "CustomEmote")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="removeEmote",
-            data={"name": name},
+            type="removeEmote",
+            body={"name": name},
             domain=domain,
         )
 
@@ -1329,10 +1328,10 @@ class KrytenClient:
             ...     "lounge", "badword", r"\\bbad\\b", "gi", "***"
             ... )
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="addFilter",
-            data={
+            type="addFilter",
+            body={
                 "name": name,
                 "source": source,
                 "flags": flags,
@@ -1377,10 +1376,10 @@ class KrytenClient:
             ...     "lounge", "badword", r"\\bbad\\b", "gi", "###"
             ... )
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="updateFilter",
-            data={
+            type="updateFilter",
+            body={
                 "name": name,
                 "source": source,
                 "flags": flags,
@@ -1413,10 +1412,10 @@ class KrytenClient:
         Example:
             >>> await client.remove_filter("lounge", "badword")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="removeFilter",
-            data={"name": name},
+            type="removeFilter",
+            body={"name": name},
             domain=domain,
         )
 
@@ -1452,10 +1451,10 @@ class KrytenClient:
             ...     "lounge", "Favorite color?", ["Red", "Blue", "Green"]
             ... )
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="newPoll",
-            data={
+            type="newPoll",
+            body={
                 "title": title,
                 "opts": options,
                 "obscured": obscured,
@@ -1486,10 +1485,10 @@ class KrytenClient:
         Example:
             >>> await client.vote("lounge", 0)  # Vote for first option
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="vote",
-            data={"option": option},
+            type="vote",
+            body={"option": option},
             domain=domain,
         )
 
@@ -1513,10 +1512,10 @@ class KrytenClient:
         Example:
             >>> await client.close_poll("lounge")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="closePoll",
-            data={},
+            type="closePoll",
+            body={},
             domain=domain,
         )
 
@@ -1549,10 +1548,10 @@ class KrytenClient:
         Example:
             >>> await client.set_channel_rank("lounge", "Alice", 2)  # Make moderator
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="setChannelRank",
-            data={"username": username, "rank": rank},
+            type="setChannelRank",
+            body={"username": username, "rank": rank},
             domain=domain,
         )
 
@@ -1577,10 +1576,10 @@ class KrytenClient:
         Example:
             >>> await client.request_channel_ranks("lounge")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="requestChannelRanks",
-            data={},
+            type="requestChannelRanks",
+            body={},
             domain=domain,
         )
 
@@ -1605,10 +1604,10 @@ class KrytenClient:
         Example:
             >>> await client.request_banlist("lounge")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="requestBanlist",
-            data={},
+            type="requestBanlist",
+            body={},
             domain=domain,
         )
 
@@ -1634,10 +1633,10 @@ class KrytenClient:
         Example:
             >>> await client.unban("lounge", 12345)
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="unban",
-            data={"id": ban_id},
+            type="unban",
+            body={"id": ban_id},
             domain=domain,
         )
 
@@ -1664,10 +1663,10 @@ class KrytenClient:
         Example:
             >>> await client.read_chan_log("lounge", 50)
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="readChanLog",
-            data={"count": count},
+            type="readChanLog",
+            body={"count": count},
             domain=domain,
         )
 
@@ -1696,10 +1695,10 @@ class KrytenClient:
         Example:
             >>> await client.search_library("lounge", "funny video")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="searchMedia",
-            data={"query": query, "source": source},
+            type="searchMedia",
+            body={"query": query, "source": source},
             domain=domain,
         )
 
@@ -1725,10 +1724,10 @@ class KrytenClient:
         Example:
             >>> await client.delete_from_library("lounge", "yt:abc123")
         """
-        return await self._send_command(
+        return await self.__send_command(service="robot", 
             channel=channel,
-            action="uncache",
-            data={"id": media_id},
+            type="uncache",
+            body={"id": media_id},
             domain=domain,
         )
 
@@ -2389,82 +2388,7 @@ class KrytenClient:
                 exc_info=True,
             )
 
-    async def _send_command(
-        self,
-        channel: str,
-        action: str,
-        data: dict[str, Any],
-        domain: str | None = None,
-    ) -> str:
-        """Send command to NATS.
 
-        Args:
-            channel: Channel name
-            action: Command action
-            data: Command data
-            domain: Optional domain
-
-        Returns:
-            Correlation ID
-
-        Raises:
-            KrytenConnectionError: If not connected
-            PublishError: If publish fails
-        """
-        if not self._connected or self.__nats is None:
-            raise KrytenConnectionError("Not connected to NATS")
-
-        # Resolve domain (use first configured channel's domain if not specified)
-        resolved_domain = domain or self.config.channels[0].domain
-
-        # Generate correlation ID
-        correlation_id = str(uuid.uuid4())
-
-        # Build subject with domain
-        subject = build_command_subject(resolved_domain, channel, action)
-
-        # Build payload
-        payload = {
-            "action": action,
-            "data": data,
-            "correlation_id": correlation_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
-
-        # Publish with retry
-        for attempt in range(self.config.retry_attempts + 1):
-            try:
-                await self.__nats.publish(subject, json.dumps(payload).encode("utf-8"))
-
-                self._commands_sent += 1
-
-                self.logger.info(
-                    f"Published command '{action}' to channel '{channel}'",
-                    extra={
-                        "subject": subject,
-                        "correlation_id": correlation_id,
-                    },
-                )
-
-                return correlation_id
-
-            except Exception as e:
-                if attempt < self.config.retry_attempts:
-                    delay = self.config.retry_delay * (2**attempt)
-                    self.logger.warning(
-                        f"Publish failed (attempt {attempt + 1}/{self.config.retry_attempts + 1}), "
-                        f"retrying in {delay}s: {e}"
-                    )
-                    await asyncio.sleep(delay)
-                else:
-                    self._errors += 1
-                    self.logger.error(f"Publish failed permanently: {e}", exc_info=True)
-                    raise PublishError(f"Failed to publish command: {e}") from e
-
-        # Should not reach here
-        raise PublishError("Failed to publish command after retries")
-
-    # NATS callbacks
 
     async def _on_error(self, e: Exception) -> None:
         """Handle NATS error.

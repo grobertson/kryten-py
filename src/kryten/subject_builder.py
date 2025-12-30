@@ -221,10 +221,10 @@ def build_command_subject(service: str, domain: str = "", channel: str = "", act
 
     service_clean = normalize_token(service)
     
-    # New style: kryten.command.{service}
+    # New style: kryten.{service}.command
     # We ignore domain/channel/action here as the new requirement 
-    # specified "kryten.command.robot" or "kryten.command.llm"
-    return f"kryten.command.{service_clean}"
+    # specified "kryten.robot.command" or "kryten.llm.command"
+    return f"kryten.{service_clean}.command"
 
 
 def parse_subject(subject: str) -> dict[str, str]:
