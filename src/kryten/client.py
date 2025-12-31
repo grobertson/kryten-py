@@ -2801,7 +2801,7 @@ class KrytenClient:
         # Capture client for closure to satisfy mypy
         nats_client = self._nats
 
-        return await get_kv_store(nats_client, bucket_name)
+        return await get_kv_store(nats_client, bucket_name, logger=self.logger)
 
     async def get_or_create_kv_bucket(
         self,
