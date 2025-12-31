@@ -36,7 +36,7 @@ async def main():
 
         # Initialize lifecycle event publisher
         lifecycle = LifecycleEventPublisher(
-            service_name="example_bot", nats_client=nats_client, logger=logger, version="1.0.0"
+            service_name="example_bot", nats_client=nats_client, logger=logger, version="1.0.0"  # type: ignore[arg-type]
         )
         await lifecycle.start()
 
@@ -48,7 +48,7 @@ async def main():
             logger.warning(f"Restart requested: {reason}, shutting down in {delay}s")
             await asyncio.sleep(delay)
             # Trigger shutdown
-            client.stop()
+            await client.stop()
 
         lifecycle.on_restart_notice(handle_restart)
 

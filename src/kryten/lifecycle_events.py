@@ -265,7 +265,7 @@ class LifecycleEventPublisher:
         if self._start_time:
             uptime = (datetime.now(timezone.utc) - self._start_time).total_seconds()
 
-        payload = {
+        payload: dict[str, Any] = {
             "service": self._service_name,
             "version": self._version,
             "hostname": self._hostname,

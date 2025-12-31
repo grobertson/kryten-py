@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.2] - 2025-12-31
+
+### Fixed
+- **Type Safety**: Resolved all `mypy` strict mode errors across the codebase.
+  - Renamed `__nats` to `_nats` in `KrytenClient` for better internal access control.
+  - Fixed callback signatures for `subscribe_request_reply`.
+  - Added safe type casts for JSON deserialization.
+  - Fixed private attribute access in tests.
+- **Examples**: Fixed type errors in `lifecycle_and_kv_example.py`.
+
 ## [0.11.1] - 2025-12-31
 
 ### Fixed

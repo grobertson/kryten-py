@@ -17,7 +17,7 @@ async def test_send_command():
     client = KrytenClient(config)
     client._connected = True
     # Mock private __nats member
-    client._KrytenClient__nats = AsyncMock()
+    client._nats = AsyncMock()
 
     # Test data
     service = "robot"
@@ -29,9 +29,9 @@ async def test_send_command():
 
     # Verify
     expected_subject = build_command_subject(service)
-    client._KrytenClient__nats.publish.assert_called_once()
+    client._nats.publish.assert_called_once()
 
-    call_args = client._KrytenClient__nats.publish.call_args
+    call_args = client._nats.publish.call_args
     assert call_args[0][0] == expected_subject
 
     payload = json.loads(call_args[0][1].decode("utf-8"))
@@ -53,13 +53,13 @@ async def test_send_command_custom_channel():
     client = KrytenClient(config)
     client._connected = True
     # Mock private __nats member
-    client._KrytenClient__nats = AsyncMock()
+    client._nats = AsyncMock()
 
     # Execute
     await client.send_command("llm", "query", "hello", domain="custom.com", channel="mychan")
 
     # Verify
-    call_args = client._KrytenClient__nats.publish.call_args
+    call_args = client._nats.publish.call_args
     payload = json.loads(call_args[0][1].decode("utf-8"))
     assert payload["meta"]["domain"] == "custom.com"
     assert payload["meta"]["channel"] == "mychan"

@@ -274,8 +274,8 @@ class SimpleMetricsServer(BaseMetricsServer):
         if self._metrics_callback:
             result = self._metrics_callback()
             if asyncio.iscoroutine(result):
-                return await result
-            return result
+                return await result  # type: ignore
+            return result  # type: ignore
         return []
 
     async def _get_health_details(self) -> dict:
@@ -283,8 +283,8 @@ class SimpleMetricsServer(BaseMetricsServer):
         if self._health_callback:
             result = self._health_callback()
             if asyncio.iscoroutine(result):
-                return await result
-            return result
+                return await result  # type: ignore
+            return result  # type: ignore
         return {}
 
 

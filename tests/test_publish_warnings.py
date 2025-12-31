@@ -16,7 +16,7 @@ async def test_publish_warning():
     logger = MagicMock()
     client = KrytenClient(config, logger=logger)
     client._connected = True
-    client._KrytenClient__nats = AsyncMock()  # Access private member
+    client._nats = AsyncMock()  # Access private member
 
     # Test 1: Publish to command subject (should warn)
     await client.publish("kryten.command.robot", b"{}")

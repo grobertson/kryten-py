@@ -1,6 +1,5 @@
 """Tests for event conversion from RawEvent to typed events."""
 
-
 import pytest
 from kryten import MockKrytenClient
 from kryten.models import (

@@ -26,7 +26,7 @@ class TestResult:
     def __init__(self, name: str):
         self.name = name
         self.passed = False
-        self.error = None
+        self.error: str | None = None
         self.details = None
 
     def success(self, details=None):
@@ -316,7 +316,7 @@ async def test_shutdown_validation(client: KrytenClient) -> TestResult:
 
         # Test 3: Invalid delay (non-integer)
         try:
-            await client.shutdown(delay_seconds="invalid", reason="Test")
+            await client.shutdown(delay_seconds="invalid", reason="Test")  # type: ignore
             result.fail("Should have rejected non-integer delay")
             return result
         except (ValueError, TypeError):

@@ -231,7 +231,7 @@ class KrytenConfig(BaseModel):
             >>> config = KrytenConfig.from_yaml("config.yaml")
         """
         try:
-            import yaml
+            import yaml  # type: ignore[import-untyped]
         except ImportError as e:
             raise ImportError(
                 "PyYAML is required for YAML support. "

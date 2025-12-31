@@ -40,7 +40,7 @@ def test_raw_event_immutable():
     )
 
     with pytest.raises(Exception):  # noqa: B017
-        event.event_name = "different"
+        event.event_name = "different"  # type: ignore
 
 
 def test_raw_event_to_bytes():
@@ -82,6 +82,7 @@ def test_chat_message_event():
             rank=0,
             channel="ch",
             domain="dom",
+            correlation_id="test-123",  # Added missing required field
         )
 
 

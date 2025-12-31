@@ -217,6 +217,7 @@ class TestLifecycleEventPublisher:
         await lifecycle_publisher._handle_restart_notice(msg)
 
         assert callback_called
+        assert callback_data is not None
         assert callback_data["reason"] == "Test restart"
 
     async def test_handle_invalid_restart_notice(self, lifecycle_publisher, mock_logger):
@@ -292,7 +293,7 @@ class TestHeartbeat:
             nats_client=mock_nats_client,
             logger=mock_logger,
             version="1.0.0",
-            heartbeat_interval=0.1,  # Very short for testing
+            heartbeat_interval=1,  # Use integer for interval
             enable_heartbeat=True,
             enable_discovery=False,
         )
