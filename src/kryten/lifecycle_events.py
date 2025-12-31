@@ -57,7 +57,7 @@ class LifecycleEventPublisher:
         nats_client: NATSClient,
         logger: logging.Logger,
         version: str = "unknown",
-        heartbeat_interval: int = 30,
+        heartbeat_interval: int | float = 30,
         enable_heartbeat: bool = True,
         enable_discovery: bool = True,
         health_port: int | None = None,
@@ -72,8 +72,8 @@ class LifecycleEventPublisher:
             nats_client: NATS client for event publishing.
             logger: Logger for structured output.
             version: Service version string.
-            heartbeat_interval: Seconds between heartbeat publishes.
-            enable_heartbeat: Whether to publish periodic heartbeats.
+            heartbeat_interval: Seconds between heartbeat publishes (default: 30).
+            enable_heartbeat: Whether to publish periodic heartbeats (default: True).
             enable_discovery: Whether to respond to discovery polls.
             health_port: Port for health endpoint (e.g., 8080).
             health_path: Path for health endpoint (default: /health).

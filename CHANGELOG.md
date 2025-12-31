@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.5] - 2025-12-31
+
+### Fixed
+- **Tests**: Fixed flaky heartbeat test by allowing float intervals and adjusting sleep times.
+- **Tests**: Fixed invalid `ValueError` assertion in `test_models.py` by properly testing missing arguments.
+- **Core**: Updated `LifecycleEventPublisher` to accept `int | float` for `heartbeat_interval` (was `int`).
+
 ## [0.11.4] - 2025-12-31
 
 ### Fixed

@@ -82,8 +82,8 @@ def test_chat_message_event():
             rank=0,
             channel="ch",
             domain="dom",
-            correlation_id="test-123",  # Added missing required field
-        )
+            # Missing correlation_id
+        )  # type: ignore[call-arg]
 
 
 def test_user_join_event():

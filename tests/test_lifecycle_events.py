@@ -293,7 +293,7 @@ class TestHeartbeat:
             nats_client=mock_nats_client,
             logger=mock_logger,
             version="1.0.0",
-            heartbeat_interval=1,  # Use integer for interval
+            heartbeat_interval=0.1,
             enable_heartbeat=True,
             enable_discovery=False,
         )
