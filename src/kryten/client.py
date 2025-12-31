@@ -2538,7 +2538,7 @@ class KrytenClient:
         request = {"service": "robot", "command": "state.user", "username": username}
 
         try:
-            response = await self._nats.request(
+            response = await nats_client.request(
                 subject=subject, payload=json.dumps(request).encode(), timeout=timeout
             )
 
@@ -2598,7 +2598,7 @@ class KrytenClient:
         request = {"service": "robot", "command": "state.user", "username": username}
 
         try:
-            response = await self._nats.request(
+            response = await nats_client.request(
                 subject=subject, payload=json.dumps(request).encode(), timeout=timeout
             )
 
@@ -2655,7 +2655,7 @@ class KrytenClient:
         request = {"service": "robot", "command": "state.profiles"}
 
         try:
-            response = await self._nats.request(
+            response = await nats_client.request(
                 subject=subject, payload=json.dumps(request).encode(), timeout=timeout
             )
 
@@ -2760,7 +2760,7 @@ class KrytenClient:
         # Capture client for closure to satisfy mypy
         nats_client = self._nats
 
-        return await get_kv_store(self._nats, bucket_name)
+        return await get_kv_store(nats_client, bucket_name)
 
     async def get_or_create_kv_bucket(
         self,
@@ -2797,7 +2797,7 @@ class KrytenClient:
         nats_client = self._nats
 
         return await get_or_create_kv_store(
-            self._nats,
+            nats_client,
             bucket_name,
             description=description,
             max_value_size=max_value_size,
@@ -2827,7 +2827,7 @@ class KrytenClient:
         # Capture client for closure to satisfy mypy
         nats_client = self._nats
 
-        kv = await get_kv_store(self._nats, bucket_name)
+        kv = await get_kv_store(nats_client, bucket_name)
         return await kv_get(kv, key, default=default, parse_json=parse_json)
 
     async def kv_put(self, bucket_name: str, key: str, value: Any, as_json: bool = False) -> None:
@@ -2849,7 +2849,7 @@ class KrytenClient:
         # Capture client for closure to satisfy mypy
         nats_client = self._nats
 
-        kv = await get_kv_store(self._nats, bucket_name)
+        kv = await get_kv_store(nats_client, bucket_name)
         await kv_put(kv, key, value, as_json=as_json)
 
     async def kv_delete(self, bucket_name: str, key: str) -> None:
@@ -2868,7 +2868,7 @@ class KrytenClient:
         # Capture client for closure to satisfy mypy
         nats_client = self._nats
 
-        kv = await get_kv_store(self._nats, bucket_name)
+        kv = await get_kv_store(nats_client, bucket_name)
         await kv_delete(kv, key)
 
     async def kv_keys(self, bucket_name: str) -> list[str]:
@@ -2889,7 +2889,7 @@ class KrytenClient:
         # Capture client for closure to satisfy mypy
         nats_client = self._nats
 
-        kv = await get_kv_store(self._nats, bucket_name)
+        kv = await get_kv_store(nats_client, bucket_name)
         return await kv_keys(kv)
 
     async def kv_get_all(self, bucket_name: str, parse_json: bool = False) -> dict[str, Any]:
@@ -2911,7 +2911,7 @@ class KrytenClient:
         # Capture client for closure to satisfy mypy
         nats_client = self._nats
 
-        kv = await get_kv_store(self._nats, bucket_name)
+        kv = await get_kv_store(nats_client, bucket_name)
         return await kv_get_all(kv, parse_json=parse_json)
 
     # Kryten-Robot State KV helpers
@@ -3072,7 +3072,7 @@ class KrytenClient:
 
         try:
             payload = json.dumps(request).encode("utf-8")
-            response = await self._nats.request(subject, payload, timeout=timeout)
+            response = await nats_client.request(subject, payload, timeout=timeout)
             return cast(dict[str, Any], json.loads(response.data.decode("utf-8")))
         except asyncio.TimeoutError as e:
             raise TimeoutError(f"NATS request timeout on {subject}") from e

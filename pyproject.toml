@@ -1,6 +1,6 @@
 [project]
 name = "kryten-py"
-version = "0.11.2"
+version = "0.11.3"
 description = "Python library for building CyTube microservices via Kryten bridge and NATS"
 readme = "README.md"
 requires-python = ">=3.10"
