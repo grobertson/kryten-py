@@ -18,15 +18,14 @@ async def main():
 
     # Configure logging
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     logger = logging.getLogger("example")
 
     # Configuration
     config = {
         "nats": {"servers": ["nats://localhost:4222"]},
-        "channels": [{"domain": "cytu.be", "channel": "lounge"}]
+        "channels": [{"domain": "cytu.be", "channel": "lounge"}],
     }
 
     async with KrytenClient(config, logger=logger) as client:
@@ -37,18 +36,15 @@ async def main():
 
         # Initialize lifecycle event publisher
         lifecycle = LifecycleEventPublisher(
-            service_name="example_bot",
-            nats_client=nats_client,
-            logger=logger,
-            version="1.0.0"
+            service_name="example_bot", nats_client=nats_client, logger=logger, version="1.0.0"
         )
         await lifecycle.start()
 
         # Register restart handler
         async def handle_restart(data):
             """Handle groupwide restart notice."""
-            reason = data.get('reason', 'Unknown')
-            delay = data.get('delay_seconds', 5)
+            reason = data.get("reason", "Unknown")
+            delay = data.get("delay_seconds", 5)
             logger.warning(f"Restart requested: {reason}, shutting down in {delay}s")
             await asyncio.sleep(delay)
             # Trigger shutdown
@@ -58,19 +54,17 @@ async def main():
 
         # Publish startup event
         await lifecycle.publish_connected("NATS")
-        await lifecycle.publish_startup(
-            config_version="1.0",
-            features=["chat", "moderation"]
-        )
+        await lifecycle.publish_startup(config_version="1.0", features=["chat", "moderation"])
 
         # ===== KeyValue Store =====
 
         # Store configuration
-        await client.kv_put("example_bot_state", "config", {
-            "enabled": True,
-            "max_messages": 100,
-            "timeout": 30
-        }, as_json=True)
+        await client.kv_put(
+            "example_bot_state",
+            "config",
+            {"enabled": True, "max_messages": 100, "timeout": 30},
+            as_json=True,
+        )
 
         # Store simple values
         await client.kv_put("example_bot_state", "last_user", "Alice")
@@ -106,7 +100,7 @@ async def main():
         @client.on("usercount")
         async def handle_usercount(event):
             """Track user count in KV store."""
-            count = event.payload.get('count', 0)
+            count = event.payload.get("count", 0)
             await client.kv_put("example_bot_state", "current_users", str(count))
             logger.info(f"User count: {count}")
 

@@ -37,7 +37,7 @@ async def lifecycle_publisher(mock_nats_client, mock_logger):
         logger=mock_logger,
         version="1.0.0",
         enable_heartbeat=False,  # Disable for simpler testing
-        enable_discovery=True,   # Discovery is enabled by default
+        enable_discovery=True,  # Discovery is enabled by default
     )
     yield publisher
     if publisher.is_running:
@@ -96,8 +96,7 @@ class TestLifecycleEventPublisher:
         assert lifecycle_publisher_minimal.is_running
         # Only restart notices subscription
         mock_nats_client.subscribe.assert_called_once_with(
-            "kryten.lifecycle.group.restart",
-            cb=lifecycle_publisher_minimal._handle_restart_notice
+            "kryten.lifecycle.group.restart", cb=lifecycle_publisher_minimal._handle_restart_notice
         )
 
     async def test_start_already_running(self, lifecycle_publisher, mock_logger):
@@ -132,7 +131,7 @@ class TestLifecycleEventPublisher:
         assert mock_nats_client.publish.called
         call_args = mock_nats_client.publish.call_args
         subject = call_args[0][0]
-        data = json.loads(call_args[0][1].decode('utf-8'))
+        data = json.loads(call_args[0][1].decode("utf-8"))
 
         assert subject == "kryten.lifecycle.test_service.startup"
         assert data["service"] == "test_service"
@@ -149,7 +148,7 @@ class TestLifecycleEventPublisher:
 
         call_args = mock_nats_client.publish.call_args
         subject = call_args[0][0]
-        data = json.loads(call_args[0][1].decode('utf-8'))
+        data = json.loads(call_args[0][1].decode("utf-8"))
 
         assert subject == "kryten.lifecycle.test_service.shutdown"
         assert data["reason"] == "Test shutdown"
@@ -161,7 +160,7 @@ class TestLifecycleEventPublisher:
 
         call_args = mock_nats_client.publish.call_args
         subject = call_args[0][0]
-        data = json.loads(call_args[0][1].decode('utf-8'))
+        data = json.loads(call_args[0][1].decode("utf-8"))
 
         assert subject == "kryten.lifecycle.test_service.connected"
         assert data["target"] == "NATS"
@@ -174,7 +173,7 @@ class TestLifecycleEventPublisher:
 
         call_args = mock_nats_client.publish.call_args
         subject = call_args[0][0]
-        data = json.loads(call_args[0][1].decode('utf-8'))
+        data = json.loads(call_args[0][1].decode("utf-8"))
 
         assert subject == "kryten.lifecycle.test_service.disconnected"
         assert data["target"] == "CyTube"
@@ -184,14 +183,12 @@ class TestLifecycleEventPublisher:
         """Test publishing groupwide restart notice."""
         await lifecycle_publisher.start()
         await lifecycle_publisher.publish_group_restart(
-            reason="Config update",
-            delay_seconds=10,
-            initiator="admin"
+            reason="Config update", delay_seconds=10, initiator="admin"
         )
 
         call_args = mock_nats_client.publish.call_args
         subject = call_args[0][0]
-        data = json.loads(call_args[0][1].decode('utf-8'))
+        data = json.loads(call_args[0][1].decode("utf-8"))
 
         assert subject == "kryten.lifecycle.group.restart"
         assert data["reason"] == "Config update"
@@ -213,11 +210,9 @@ class TestLifecycleEventPublisher:
 
         # Simulate restart notice
         msg = Mock()
-        msg.data = json.dumps({
-            "initiator": "test",
-            "reason": "Test restart",
-            "delay_seconds": 5
-        }).encode('utf-8')
+        msg.data = json.dumps(
+            {"initiator": "test", "reason": "Test restart", "delay_seconds": 5}
+        ).encode("utf-8")
 
         await lifecycle_publisher._handle_restart_notice(msg)
 
@@ -246,7 +241,7 @@ class TestLifecycleEventPublisher:
         await lifecycle_publisher.publish_shutdown()
 
         call_args = mock_nats_client.publish.call_args
-        data = json.loads(call_args[0][1].decode('utf-8'))
+        data = json.loads(call_args[0][1].decode("utf-8"))
 
         assert data["uptime_seconds"] is not None
         assert data["uptime_seconds"] >= 0.1
@@ -260,7 +255,7 @@ class TestLifecycleEventPublisher:
         for call in mock_nats_client.publish.call_args_list:
             subject = call[0][0]
             if "heartbeat" in subject:
-                data = json.loads(call[0][1].decode('utf-8'))
+                data = json.loads(call[0][1].decode("utf-8"))
                 assert subject == "kryten.lifecycle.test_service.heartbeat"
                 assert data["service"] == "test_service"
                 assert data["version"] == "1.0.0"
@@ -316,8 +311,7 @@ class TestHeartbeat:
 
         # Should have published at least one heartbeat
         heartbeat_calls = [
-            call for call in mock_nats_client.publish.call_args_list
-            if "heartbeat" in call[0][0]
+            call for call in mock_nats_client.publish.call_args_list if "heartbeat" in call[0][0]
         ]
         assert len(heartbeat_calls) >= 1
 

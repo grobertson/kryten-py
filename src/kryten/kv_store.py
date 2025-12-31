@@ -13,9 +13,7 @@ from nats.js import JetStreamContext, api
 
 
 async def get_kv_store(
-    nats_client: NATSClient,
-    bucket_name: str,
-    logger: logging.Logger | None = None
+    nats_client: NATSClient, bucket_name: str, logger: logging.Logger | None = None
 ) -> Any:
     """Get an existing NATS JetStream KeyValue store.
 
@@ -49,7 +47,9 @@ async def get_kv_store(
         if logger:
             logger.error(
                 "KV bucket '%s' does not exist. Ensure kryten-robot is running "
-                "and has created the bucket: %s", bucket_name, e
+                "and has created the bucket: %s",
+                bucket_name,
+                e,
             )
         raise
 
@@ -59,7 +59,7 @@ async def get_or_create_kv_store(
     bucket_name: str,
     description: str | None = None,
     max_value_size: int = 1024 * 1024,  # 1MB default
-    logger: logging.Logger | None = None
+    logger: logging.Logger | None = None,
 ) -> Any:
     """Get or create a NATS JetStream KeyValue store.
 
@@ -114,7 +114,7 @@ async def kv_get(
     key: str,
     default: Any = None,
     parse_json: bool = False,
-    logger: logging.Logger | None = None
+    logger: logging.Logger | None = None,
 ) -> Any:
     """Get a value from KeyValue store.
 
@@ -140,7 +140,7 @@ async def kv_get(
         value = entry.value
         if parse_json and value:
             try:
-                return json.loads(value.decode('utf-8'))
+                return json.loads(value.decode("utf-8"))
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
                 if logger:
                     logger.error("Failed to parse JSON for key %s: %s", key, e)
@@ -155,11 +155,7 @@ async def kv_get(
 
 
 async def kv_put(
-    kv_store: Any,
-    key: str,
-    value: Any,
-    as_json: bool = False,
-    logger: logging.Logger | None = None
+    kv_store: Any, key: str, value: Any, as_json: bool = False, logger: logging.Logger | None = None
 ) -> bool:
     """Put a value into KeyValue store.
 
@@ -179,14 +175,14 @@ async def kv_put(
     """
     try:
         if as_json:
-            data = json.dumps(value).encode('utf-8')
+            data = json.dumps(value).encode("utf-8")
         elif isinstance(value, str):
-            data = value.encode('utf-8')
+            data = value.encode("utf-8")
         elif isinstance(value, bytes):
             data = value
         else:
             # Try to convert to string then bytes
-            data = str(value).encode('utf-8')
+            data = str(value).encode("utf-8")
 
         await kv_store.put(key, data)
         if logger:
@@ -199,11 +195,7 @@ async def kv_put(
         return False
 
 
-async def kv_delete(
-    kv_store: Any,
-    key: str,
-    logger: logging.Logger | None = None
-) -> bool:
+async def kv_delete(kv_store: Any, key: str, logger: logging.Logger | None = None) -> bool:
     """Delete a key from KeyValue store.
 
     Args:
@@ -228,10 +220,7 @@ async def kv_delete(
         return False
 
 
-async def kv_keys(
-    kv_store: Any,
-    logger: logging.Logger | None = None
-) -> list[str]:
+async def kv_keys(kv_store: Any, logger: logging.Logger | None = None) -> list[str]:
     """Get all keys from KeyValue store.
 
     Args:
@@ -255,9 +244,7 @@ async def kv_keys(
 
 
 async def kv_get_all(
-    kv_store: Any,
-    parse_json: bool = False,
-    logger: logging.Logger | None = None
+    kv_store: Any, parse_json: bool = False, logger: logging.Logger | None = None
 ) -> dict[str, Any]:
     """Get all key-value pairs from KeyValue store.
 

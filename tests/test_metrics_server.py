@@ -34,10 +34,7 @@ class TestSimpleMetricsServer:
     @pytest.mark.asyncio
     async def test_initialization(self):
         """Test server initialization."""
-        server = SimpleMetricsServer(
-            service_name="test-service",
-            port=8888
-        )
+        server = SimpleMetricsServer(service_name="test-service", port=8888)
 
         assert server.service_name == "test-service"
         assert server.port == 8888
@@ -46,13 +43,11 @@ class TestSimpleMetricsServer:
     @pytest.mark.asyncio
     async def test_custom_metrics_callback(self):
         """Test custom metrics via callback."""
+
         async def my_metrics():
             return ["# HELP foo Foo metric", "foo 123"]
 
-        server = SimpleMetricsServer(
-            service_name="test",
-            metrics_callback=my_metrics
-        )
+        server = SimpleMetricsServer(service_name="test", metrics_callback=my_metrics)
 
         result = await server._collect_custom_metrics()
         assert "foo 123" in result
@@ -60,13 +55,11 @@ class TestSimpleMetricsServer:
     @pytest.mark.asyncio
     async def test_custom_metrics_sync_callback(self):
         """Test custom metrics with sync callback."""
+
         def my_metrics():
             return ["# HELP bar Bar metric", "bar 456"]
 
-        server = SimpleMetricsServer(
-            service_name="test",
-            metrics_callback=my_metrics
-        )
+        server = SimpleMetricsServer(service_name="test", metrics_callback=my_metrics)
 
         result = await server._collect_custom_metrics()
         assert "bar 456" in result
@@ -74,13 +67,11 @@ class TestSimpleMetricsServer:
     @pytest.mark.asyncio
     async def test_health_callback(self):
         """Test health details via callback."""
+
         async def my_health():
             return {"db": "connected", "items": 100}
 
-        server = SimpleMetricsServer(
-            service_name="test",
-            health_callback=my_health
-        )
+        server = SimpleMetricsServer(service_name="test", health_callback=my_health)
 
         result = await server._get_health_details()
         assert result["db"] == "connected"
@@ -89,10 +80,7 @@ class TestSimpleMetricsServer:
     @pytest.mark.asyncio
     async def test_collect_all_metrics(self):
         """Test full metrics collection."""
-        server = SimpleMetricsServer(
-            service_name="myservice",
-            port=8080
-        )
+        server = SimpleMetricsServer(service_name="myservice", port=8080)
 
         metrics = await server._collect_all_metrics()
 
@@ -105,10 +93,7 @@ class TestSimpleMetricsServer:
         mock_client = MagicMock()
         mock_client._running = True
 
-        server = SimpleMetricsServer(
-            service_name="myservice",
-            client=mock_client
-        )
+        server = SimpleMetricsServer(service_name="myservice", client=mock_client)
 
         metrics = await server._collect_all_metrics()
 
@@ -155,10 +140,7 @@ class TestConcreteMetricsServer:
         mock_client = MagicMock()
         mock_client._running = True
 
-        server = ConcreteMetricsServer(
-            service_name="test",
-            client=mock_client
-        )
+        server = ConcreteMetricsServer(service_name="test", client=mock_client)
 
         health = await server._build_health_response()
 
@@ -171,10 +153,7 @@ class TestConcreteMetricsServer:
         mock_client = MagicMock()
         mock_client._running = False
 
-        server = ConcreteMetricsServer(
-            service_name="test",
-            client=mock_client
-        )
+        server = ConcreteMetricsServer(service_name="test", client=mock_client)
 
         health = await server._build_health_response()
 
@@ -189,8 +168,7 @@ class TestMetricsServerLifecycle:
     async def test_start_stop(self):
         """Test server start and stop."""
         server = SimpleMetricsServer(
-            service_name="test",
-            port=18282  # Use non-standard port for testing
+            service_name="test", port=18282  # Use non-standard port for testing
         )
 
         # Start server

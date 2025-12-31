@@ -81,7 +81,7 @@ def test_chat_message_event():
             timestamp=datetime.now(),
             rank=0,
             channel="ch",
-            domain="dom"
+            domain="dom",
         )
 
 

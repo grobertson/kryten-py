@@ -127,7 +127,9 @@ class ServiceConfig(BaseModel):
     enable_discovery: bool = Field(True, description="Respond to service discovery polls")
     health_port: int | None = Field(None, description="Port for health endpoint")
     health_path: str = Field("/health", description="Path for health endpoint")
-    metrics_port: int | None = Field(None, description="Port for metrics endpoint (defaults to health_port)")
+    metrics_port: int | None = Field(
+        None, description="Port for metrics endpoint (defaults to health_port)"
+    )
     metrics_path: str = Field("/metrics", description="Path for metrics endpoint")
 
     @field_validator("name")
@@ -163,8 +165,12 @@ class KrytenConfig(BaseModel):
 
     nats: NatsConfig = Field(..., description="NATS connection settings")
     channels: list[ChannelConfig] = Field(..., description="List of CyTube channels to connect to")
-    service: ServiceConfig | None = Field(None, description="Service identity and lifecycle settings")
-    metrics: MetricsConfig | None = Field(None, description="Metrics server configuration (auto-populates service endpoints)")
+    service: ServiceConfig | None = Field(
+        None, description="Service identity and lifecycle settings"
+    )
+    metrics: MetricsConfig | None = Field(
+        None, description="Metrics server configuration (auto-populates service endpoints)"
+    )
     retry_attempts: int = Field(3, description="Command retry attempts", ge=0, le=10)
     retry_delay: float = Field(1.0, description="Initial retry delay in seconds", ge=0.1)
     handler_timeout: float = Field(30.0, description="Max handler execution time", ge=1.0)

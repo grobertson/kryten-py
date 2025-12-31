@@ -145,8 +145,7 @@ class LifecycleEventPublisher:
         # Subscribe to groupwide restart notices
         try:
             self._subscription = await self._nats.subscribe(
-                "kryten.lifecycle.group.restart",
-                cb=self._handle_restart_notice
+                "kryten.lifecycle.group.restart", cb=self._handle_restart_notice
             )
             self._logger.info("Subscribed to groupwide restart notices")
         except Exception as e:
@@ -156,8 +155,7 @@ class LifecycleEventPublisher:
         if self._enable_discovery:
             try:
                 self._discovery_subscription = await self._nats.subscribe(
-                    "kryten.service.discovery.poll",
-                    cb=self._handle_discovery_poll
+                    "kryten.service.discovery.poll", cb=self._handle_discovery_poll
                 )
                 self._logger.info("Subscribed to service discovery polls")
             except Exception as e:
@@ -235,16 +233,18 @@ class LifecycleEventPublisher:
     async def _handle_restart_notice(self, msg: Any) -> None:
         """Handle incoming groupwide restart notice."""
         try:
-            data = json.loads(msg.data.decode('utf-8'))
+            data = json.loads(msg.data.decode("utf-8"))
 
             # Extract restart parameters
-            initiator = data.get('initiator', 'unknown')
-            reason = data.get('reason', 'No reason provided')
-            delay_seconds = data.get('delay_seconds', 5)
+            initiator = data.get("initiator", "unknown")
+            reason = data.get("reason", "No reason provided")
+            delay_seconds = data.get("delay_seconds", 5)
 
             self._logger.warning(
                 "Groupwide restart notice received from %s: %s (restarting in %ss)",
-                initiator, reason, delay_seconds
+                initiator,
+                reason,
+                delay_seconds,
             )
 
             # Call registered callback if any
@@ -326,7 +326,7 @@ class LifecycleEventPublisher:
         payload.update(extra_data)
 
         try:
-            data_bytes = json.dumps(payload).encode('utf-8')
+            data_bytes = json.dumps(payload).encode("utf-8")
             await self._nats.publish(subject, data_bytes)
             self._logger.info("Published startup event to %s", subject)
         except Exception as e:
@@ -345,7 +345,7 @@ class LifecycleEventPublisher:
         payload.update(extra_data)
 
         try:
-            data_bytes = json.dumps(payload).encode('utf-8')
+            data_bytes = json.dumps(payload).encode("utf-8")
             await self._nats.publish(subject, data_bytes)
             self._logger.info("Published shutdown event to %s", subject)
         except Exception as e:
@@ -365,7 +365,7 @@ class LifecycleEventPublisher:
         payload.update(extra_data)
 
         try:
-            data_bytes = json.dumps(payload).encode('utf-8')
+            data_bytes = json.dumps(payload).encode("utf-8")
             await self._nats.publish(subject, data_bytes)
             self._logger.debug("Published heartbeat to %s", subject)
         except Exception as e:
@@ -384,13 +384,15 @@ class LifecycleEventPublisher:
         payload.update(extra_data)
 
         try:
-            data_bytes = json.dumps(payload).encode('utf-8')
+            data_bytes = json.dumps(payload).encode("utf-8")
             await self._nats.publish(subject, data_bytes)
             self._logger.debug("Published connected event to %s", subject)
         except Exception as e:
             self._logger.error("Failed to publish connected event: %s", e, exc_info=True)
 
-    async def publish_disconnected(self, target: str, reason: str = "Unknown", **extra_data: Any) -> None:
+    async def publish_disconnected(
+        self, target: str, reason: str = "Unknown", **extra_data: Any
+    ) -> None:
         """Publish connection lost event.
 
         Args:
@@ -405,18 +407,14 @@ class LifecycleEventPublisher:
         payload.update(extra_data)
 
         try:
-            data_bytes = json.dumps(payload).encode('utf-8')
+            data_bytes = json.dumps(payload).encode("utf-8")
             await self._nats.publish(subject, data_bytes)
             self._logger.warning("Published disconnected event to %s", subject)
         except Exception as e:
             self._logger.error("Failed to publish disconnected event: %s", e, exc_info=True)
 
     async def publish_group_restart(
-        self,
-        reason: str,
-        delay_seconds: int = 5,
-        initiator: str | None = None,
-        **extra_data: Any
+        self, reason: str, delay_seconds: int = 5, initiator: str | None = None, **extra_data: Any
     ) -> None:
         """Publish groupwide restart notice to all Kryten services.
 
@@ -436,11 +434,10 @@ class LifecycleEventPublisher:
         payload.update(extra_data)
 
         try:
-            data_bytes = json.dumps(payload).encode('utf-8')
+            data_bytes = json.dumps(payload).encode("utf-8")
             await self._nats.publish(subject, data_bytes)
             self._logger.warning(
-                "Published groupwide restart notice: %s (delay: %ss)",
-                reason, delay_seconds
+                "Published groupwide restart notice: %s (delay: %ss)", reason, delay_seconds
             )
         except Exception as e:
             self._logger.error("Failed to publish restart notice: %s", e, exc_info=True)

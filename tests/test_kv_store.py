@@ -87,9 +87,7 @@ class TestGetOrCreateKVStore:
         js.key_value.side_effect = Exception("Bucket not found")
 
         result = await get_or_create_kv_store(
-            client, "new_bucket",
-            description="Test bucket",
-            logger=mock_logger
+            client, "new_bucket", description="Test bucket", logger=mock_logger
         )
 
         assert result == kv
@@ -125,7 +123,7 @@ class TestKVGet:
         """Test getting a key with JSON parsing."""
         kv = AsyncMock()
         entry = Mock()
-        entry.value = json.dumps({"key": "value"}).encode('utf-8')
+        entry.value = json.dumps({"key": "value"}).encode("utf-8")
         kv.get.return_value = entry
 
         result = await kv_get(kv, "json_key", parse_json=True, logger=mock_logger)
@@ -186,7 +184,7 @@ class TestKVPut:
         assert result is True
         call_args = kv.put.call_args[0]
         assert call_args[0] == "test_key"
-        assert json.loads(call_args[1].decode('utf-8')) == data
+        assert json.loads(call_args[1].decode("utf-8")) == data
 
     async def test_put_error_handling(self, mock_logger):
         """Test error handling when put fails."""
@@ -287,9 +285,9 @@ class TestKVGetAll:
         kv.keys.return_value = ["config", "data"]
 
         entry1 = Mock()
-        entry1.value = json.dumps({"setting": "value"}).encode('utf-8')
+        entry1.value = json.dumps({"setting": "value"}).encode("utf-8")
         entry2 = Mock()
-        entry2.value = json.dumps({"count": 42}).encode('utf-8')
+        entry2.value = json.dumps({"count": 42}).encode("utf-8")
 
         async def mock_get(key):
             if key == "config":
@@ -302,7 +300,4 @@ class TestKVGetAll:
 
         result = await kv_get_all(kv, parse_json=True, logger=mock_logger)
 
-        assert result == {
-            "config": {"setting": "value"},
-            "data": {"count": 42}
-        }
+        assert result == {"config": {"setting": "value"}, "data": {"count": 42}}

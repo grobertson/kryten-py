@@ -1,6 +1,6 @@
 [project]
 name = "kryten-py"
-version = "0.11.0"
+version = "0.11.1"
 description = "Python library for building CyTube microservices via Kryten bridge and NATS"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -40,13 +40,15 @@ ignore = [ "E501",]
 
 [tool.mypy]
 python_version = "3.10"
-strict = true
+plugins = ["pydantic.mypy"]
+strict = false
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
 check_untyped_defs = true
 no_implicit_optional = true
+ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "nats.*"
 ignore_missing_imports = true

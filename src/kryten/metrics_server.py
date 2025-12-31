@@ -110,19 +110,13 @@ class BaseMetricsServer(ABC):
             return web.json_response(health, status=status)
         except Exception as e:
             self.logger.error(f"Error in health check: {e}", exc_info=True)
-            return web.json_response(
-                {"status": "error", "error": str(e)},
-                status=500
-            )
+            return web.json_response({"status": "error", "error": str(e)}, status=500)
 
     async def _handle_metrics(self, request: web.Request) -> web.Response:
         """Handle GET /metrics request."""
         try:
             metrics = await self._collect_all_metrics()
-            return web.Response(
-                text=metrics,
-                content_type="text/plain; version=0.0.4"
-            )
+            return web.Response(text=metrics, content_type="text/plain; version=0.0.4")
         except Exception as e:
             self.logger.error(f"Error collecting metrics: {e}", exc_info=True)
             return web.Response(text="# Error collecting metrics\n", status=500)
@@ -172,7 +166,9 @@ class BaseMetricsServer(ABC):
         lines.append(f"{prefix}_uptime_seconds {uptime:.2f}")
         lines.append("")
 
-        lines.append(f"# HELP {prefix}_service_status Service health status (1=healthy, 0=unhealthy)")
+        lines.append(
+            f"# HELP {prefix}_service_status Service health status (1=healthy, 0=unhealthy)"
+        )
         lines.append(f"# TYPE {prefix}_service_status gauge")
         lines.append(f"{prefix}_service_status {1 if self._running else 0}")
         lines.append("")
@@ -180,7 +176,9 @@ class BaseMetricsServer(ABC):
         # NATS connection status
         if self.client:
             nats_connected = 1 if getattr(self.client, "_running", False) else 0
-            lines.append(f"# HELP {prefix}_nats_connected NATS connection status (1=connected, 0=disconnected)")
+            lines.append(
+                f"# HELP {prefix}_nats_connected NATS connection status (1=connected, 0=disconnected)"
+            )
             lines.append(f"# TYPE {prefix}_nats_connected gauge")
             lines.append(f"{prefix}_nats_connected {nats_connected}")
             lines.append("")

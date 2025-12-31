@@ -58,9 +58,7 @@ class MockKrytenClient:
 
         # Mock state
         self._connected = False
-        self._handlers: dict[
-            str, list[tuple[Callable[[Any], Any], str | None, str | None]]
-        ] = {}
+        self._handlers: dict[str, list[tuple[Callable[[Any], Any], str | None, str | None]]] = {}
         self._published_commands: list[dict[str, Any]] = []
         self._running = False
 
@@ -499,7 +497,11 @@ class MockKrytenClient:
 
                 # Time is Unix timestamp in milliseconds
                 time_ms = payload.get("time", 0)
-                timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
+                timestamp = (
+                    datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                    if time_ms
+                    else raw_event.timestamp
+                )
 
                 return ChatMessageEvent(
                     username=username,
@@ -522,7 +524,11 @@ class MockKrytenClient:
 
                 message = payload.get("msg", payload.get("message", ""))
                 time_ms = payload.get("time", 0)
-                timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
+                timestamp = (
+                    datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                    if time_ms
+                    else raw_event.timestamp
+                )
 
                 return ChatMessageEvent(
                     username=username,
@@ -538,7 +544,11 @@ class MockKrytenClient:
                 username = payload.get("name", "")
                 rank = payload.get("rank", 0)
                 time_ms = payload.get("time", 0)
-                timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
+                timestamp = (
+                    datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                    if time_ms
+                    else raw_event.timestamp
+                )
 
                 return UserJoinEvent(
                     username=username,
@@ -552,7 +562,11 @@ class MockKrytenClient:
             elif event_name == "userleave":
                 username = payload.get("name", "")
                 time_ms = payload.get("time", 0)
-                timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
+                timestamp = (
+                    datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                    if time_ms
+                    else raw_event.timestamp
+                )
 
                 return UserLeaveEvent(
                     username=username,
@@ -569,7 +583,11 @@ class MockKrytenClient:
                 duration = payload.get("seconds", 0)
                 uid = payload.get("uid", 0)
                 time_ms = payload.get("time", 0)
-                timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
+                timestamp = (
+                    datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                    if time_ms
+                    else raw_event.timestamp
+                )
 
                 return ChangeMediaEvent(
                     media_type=media_type,
@@ -587,7 +605,11 @@ class MockKrytenClient:
                 action = payload.get("action", "")
                 uid = payload.get("uid")
                 time_ms = payload.get("time", 0)
-                timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
+                timestamp = (
+                    datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                    if time_ms
+                    else raw_event.timestamp
+                )
 
                 return PlaylistUpdateEvent(
                     action=action,

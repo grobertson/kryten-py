@@ -11,7 +11,7 @@ async def test_send_command():
     config = {
         "nats": {"servers": ["nats://localhost:4222"]},
         "channels": [{"domain": "test.com", "channel": "test"}],
-        "service": {"name": "test-service"}
+        "service": {"name": "test-service"},
     }
 
     client = KrytenClient(config)
@@ -35,18 +35,19 @@ async def test_send_command():
     assert call_args[0][0] == expected_subject
 
     payload = json.loads(call_args[0][1].decode("utf-8"))
-    assert payload["command"] == cmd_type # Changed from "type"
-    assert payload["args"] == {"value": body} # Changed from "body"
+    assert payload["command"] == cmd_type  # Changed from "type"
+    assert payload["args"] == {"value": body}  # Changed from "body"
     assert payload["meta"]["source"] == "test-service"
-    assert payload["meta"]["domain"] == "test.com" # Default from config
-    assert payload["meta"]["channel"] == "lounge" # Default
+    assert payload["meta"]["domain"] == "test.com"  # Default from config
+    assert payload["meta"]["channel"] == "lounge"  # Default
+
 
 @pytest.mark.asyncio
 async def test_send_command_custom_channel():
     # Setup
     config = {
         "nats": {"servers": ["nats://localhost:4222"]},
-        "channels": [{"domain": "test.com", "channel": "test"}]
+        "channels": [{"domain": "test.com", "channel": "test"}],
     }
 
     client = KrytenClient(config)
@@ -62,4 +63,4 @@ async def test_send_command_custom_channel():
     payload = json.loads(call_args[0][1].decode("utf-8"))
     assert payload["meta"]["domain"] == "custom.com"
     assert payload["meta"]["channel"] == "mychan"
-    assert payload["meta"]["source"] == "kryten-client" # Default when no service config
+    assert payload["meta"]["source"] == "kryten-client"  # Default when no service config

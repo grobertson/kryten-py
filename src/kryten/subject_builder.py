@@ -194,7 +194,9 @@ def build_event_subject(event: RawEvent) -> str:
     return build_subject(event.domain, event.channel, event.event_name)
 
 
-def build_command_subject(service: str, domain: str = "", channel: str = "", action: str = "") -> str:
+def build_command_subject(
+    service: str, domain: str = "", channel: str = "", action: str = ""
+) -> str:
     """Build NATS subject for sending commands.
 
     Constructs hierarchical subject following the format:

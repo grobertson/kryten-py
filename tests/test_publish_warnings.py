@@ -10,13 +10,13 @@ async def test_publish_warning():
     config = {
         "nats": {"servers": ["nats://localhost:4222"]},
         "channels": [{"domain": "test.com", "channel": "test"}],
-        "service": {"name": "test-service"}
+        "service": {"name": "test-service"},
     }
 
     logger = MagicMock()
     client = KrytenClient(config, logger=logger)
     client._connected = True
-    client._KrytenClient__nats = AsyncMock() # Access private member
+    client._KrytenClient__nats = AsyncMock()  # Access private member
 
     # Test 1: Publish to command subject (should warn)
     await client.publish("kryten.command.robot", b"{}")

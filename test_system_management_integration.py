@@ -69,13 +69,15 @@ async def test_ping(client: KrytenClient) -> TestResult:
             result.fail(f"Invalid timestamp format: {e}")
             return result
 
-        result.success({
-            "pong": response["pong"],
-            "timestamp": response["timestamp"],
-            "uptime_seconds": round(response["uptime_seconds"], 2),
-            "version": response.get("version", "N/A"),
-            "response_time": "< 2s"
-        })
+        result.success(
+            {
+                "pong": response["pong"],
+                "timestamp": response["timestamp"],
+                "uptime_seconds": round(response["uptime_seconds"], 2),
+                "version": response.get("version", "N/A"),
+                "response_time": "< 2s",
+            }
+        )
 
     except Exception as e:
         result.fail(e)
@@ -138,7 +140,14 @@ async def test_get_stats(client: KrytenClient) -> TestResult:
 
         # Validate state structure (check for either format)
         state = stats["state"]
-        state_keys = ["users", "playlist", "emotes", "users_online", "playlist_items", "emotes_count"]
+        state_keys = [
+            "users",
+            "playlist",
+            "emotes",
+            "users_online",
+            "playlist_items",
+            "emotes_count",
+        ]
         if not any(k in state for k in state_keys):
             result.fail(f"Missing state keys, got: {list(state.keys())}")
             return result
@@ -157,14 +166,16 @@ async def test_get_stats(client: KrytenClient) -> TestResult:
         elif "queries" in stats:
             result_data["queries_processed"] = stats["queries"].get("processed", 0)
 
-        result_data.update({
-            "cytube_connected": connections["cytube"].get("connected", False),
-            "nats_connected": connections["nats"].get("connected", False),
-            "users_count": state.get("users") or state.get("users_online", 0),
-            "playlist_count": state.get("playlist") or state.get("playlist_items", 0),
-            "emotes_count": state.get("emotes") or state.get("emotes_count", 0),
-            "memory_rss_mb": stats.get("memory", {}).get("rss_mb", "N/A")
-        })
+        result_data.update(
+            {
+                "cytube_connected": connections["cytube"].get("connected", False),
+                "nats_connected": connections["nats"].get("connected", False),
+                "users_count": state.get("users") or state.get("users_online", 0),
+                "playlist_count": state.get("playlist") or state.get("playlist_items", 0),
+                "emotes_count": state.get("emotes") or state.get("emotes_count", 0),
+                "memory_rss_mb": stats.get("memory", {}).get("rss_mb", "N/A"),
+            }
+        )
 
         result.success(result_data)
 
@@ -218,15 +229,17 @@ async def test_get_config(client: KrytenClient) -> TestResult:
             result.fail("Missing enabled in commands config")
             return result
 
-        result.success({
-            "domain": cytube["domain"],
-            "channel": cytube["channel"],
-            "nats_servers": nats["servers"],
-            "commands_enabled": commands_cfg["enabled"],
-            "health_enabled": config["health"].get("enabled", False),
-            "log_level": config["log_level"],
-            "passwords_redacted": True
-        })
+        result.success(
+            {
+                "domain": cytube["domain"],
+                "channel": cytube["channel"],
+                "nats_servers": nats["servers"],
+                "commands_enabled": commands_cfg["enabled"],
+                "health_enabled": config["health"].get("enabled", False),
+                "log_level": config["log_level"],
+                "passwords_redacted": True,
+            }
+        )
 
     except Exception as e:
         result.fail(e)
@@ -261,12 +274,14 @@ async def test_reload_config(client: KrytenClient) -> TestResult:
             return result
 
         # For unchanged config, should succeed with no changes
-        result.success({
-            "success": response["success"],
-            "message": response["message"],
-            "changes_count": len(response["changes"]),
-            "errors_count": len(response["errors"])
-        })
+        result.success(
+            {
+                "success": response["success"],
+                "message": response["message"],
+                "changes_count": len(response["changes"]),
+                "errors_count": len(response["errors"]),
+            }
+        )
 
     except Exception as e:
         result.fail(e)
@@ -307,10 +322,12 @@ async def test_shutdown_validation(client: KrytenClient) -> TestResult:
         except (ValueError, TypeError):
             pass  # Expected
 
-        result.success({
-            "validation": "All parameter validations working correctly",
-            "note": "Shutdown not actually triggered"
-        })
+        result.success(
+            {
+                "validation": "All parameter validations working correctly",
+                "note": "Shutdown not actually triggered",
+            }
+        )
 
     except Exception as e:
         result.fail(e)
@@ -327,15 +344,8 @@ async def run_tests():
 
     # Configure client
     config = {
-        "nats": {
-            "servers": ["nats://localhost:4222"]
-        },
-        "channels": [
-            {
-                "domain": "cytu.be",
-                "channel": "420grindhouse"
-            }
-        ]
+        "nats": {"servers": ["nats://localhost:4222"]},
+        "channels": [{"domain": "cytu.be", "channel": "420grindhouse"}],
     }
 
     client = KrytenClient(config)
@@ -350,7 +360,7 @@ async def run_tests():
             test_get_stats,
             test_get_config,
             test_reload_config,
-            test_shutdown_validation
+            test_shutdown_validation,
         ]
 
         results = []
@@ -394,6 +404,7 @@ async def run_tests():
     except Exception as e:
         print(f"\n❌ Test setup failed: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

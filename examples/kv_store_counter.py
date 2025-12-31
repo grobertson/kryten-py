@@ -18,15 +18,14 @@ async def main():
 
     # Configure logging
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     logger = logging.getLogger("counter_bot")
 
     # Configuration
     config = {
         "nats": {"servers": ["nats://localhost:4222"]},
-        "channels": [{"domain": "cytu.be", "channel": "lounge"}]
+        "channels": [{"domain": "cytu.be", "channel": "lounge"}],
     }
 
     async with KrytenClient(config, logger=logger) as client:
@@ -41,22 +40,14 @@ async def main():
 
             # Get current count for this user
             current_count = await client.kv_get(
-                "message_counts",
-                f"user:{username}",
-                default=0,
-                parse_json=True
+                "message_counts", f"user:{username}", default=0, parse_json=True
             )
 
             # Increment count
             new_count = current_count + 1
 
             # Save back to KV store
-            await client.kv_put(
-                "message_counts",
-                f"user:{username}",
-                new_count,
-                as_json=True
-            )
+            await client.kv_put("message_counts", f"user:{username}", new_count, as_json=True)
 
             logger.info(f"{username} has sent {new_count} messages")
 
@@ -65,7 +56,7 @@ async def main():
                 await client.send_chat(
                     event.channel,
                     f"{username}: You've sent {new_count} messages!",
-                    domain=event.domain
+                    domain=event.domain,
                 )
 
             # Respond to !leaderboard command
@@ -76,22 +67,17 @@ async def main():
                 sorted_users = sorted(
                     all_counts.items(),
                     key=lambda x: x[1] if isinstance(x[1], int) else 0,
-                    reverse=True
+                    reverse=True,
                 )[:5]
 
                 if sorted_users:
                     leaderboard = "Top 5 chatters: " + ", ".join(
-                        f"{user.replace('user:', '')}: {count}"
-                        for user, count in sorted_users
+                        f"{user.replace('user:', '')}: {count}" for user, count in sorted_users
                     )
                 else:
                     leaderboard = "No messages counted yet!"
 
-                await client.send_chat(
-                    event.channel,
-                    leaderboard,
-                    domain=event.domain
-                )
+                await client.send_chat(event.channel, leaderboard, domain=event.domain)
 
         logger.info("Counter bot started. Commands: !stats, !leaderboard")
         logger.info("Press Ctrl+C to stop")

@@ -14,7 +14,7 @@ from kryten import KrytenClient  # noqa: E402
 async def debug_responses():
     config = {
         "nats": {"servers": ["nats://localhost:4222"]},
-        "channels": [{"domain": "cytu.be", "channel": "420grindhouse"}]
+        "channels": [{"domain": "cytu.be", "channel": "420grindhouse"}],
     }
 
     client = KrytenClient(config)

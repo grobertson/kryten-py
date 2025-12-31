@@ -599,7 +599,7 @@ class KrytenClient:
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "domain": domain,
                 "channel": channel,
-                "request_id": request_id
+                "request_id": request_id,
             },
         }
 
@@ -642,11 +642,7 @@ class KrytenClient:
             >>> await client.send_chat("lounge", "Hello!")
         """
         return await self.__send_command(
-            service="robot",
-            type="say",
-            body={"message": message},
-            domain=domain,
-            channel=channel
+            service="robot", type="say", body={"message": message}, domain=domain, channel=channel
         )
 
     async def send_pm(
@@ -663,7 +659,7 @@ class KrytenClient:
             type="pm",
             body={"to": username, "msg": message},
             domain=domain,
-            channel=channel
+            channel=channel,
         )
 
     # Command Publishing - Playlist
@@ -696,10 +692,10 @@ class KrytenClient:
         """
         return await self.__send_command(
             service="robot",
-            type="addvideo", # Updated to match RobotCommandHandler
+            type="addvideo",  # Updated to match RobotCommandHandler
             body={"type": media_type, "id": media_id, "pos": position, "temp": temp},
             domain=domain,
-            channel=channel # Added channel
+            channel=channel,  # Added channel
         )
 
     async def delete_media(
@@ -719,7 +715,8 @@ class KrytenClient:
         Returns:
             Correlation ID
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="delete",
             body={"uid": uid},
@@ -735,7 +732,8 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Move media to new position in playlist."""
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="move",
             body={"from": uid, "after": position},
@@ -750,7 +748,8 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Jump to specific media in playlist."""
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="jump",
             body={"uid": uid},
@@ -764,7 +763,8 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Clear entire playlist."""
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="clear",
             body={},
@@ -778,7 +778,8 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Shuffle playlist order."""
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="shuffle",
             body={},
@@ -794,7 +795,8 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Set temporary flag on playlist item."""
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="settemp",
             body={"uid": uid, "temp": is_temp},
@@ -810,7 +812,8 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Pause current media."""
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="pause",
             body={},
@@ -824,7 +827,8 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Resume playback."""
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="play",
             body={},
@@ -839,7 +843,8 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Seek to specific time in current media."""
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="seek",
             body={"time": time_seconds},
@@ -860,7 +865,8 @@ class KrytenClient:
         data: dict[str, Any] = {"name": username}
         if reason:
             data["reason"] = reason
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="kick",
             body=data,
@@ -879,7 +885,8 @@ class KrytenClient:
         data: dict[str, Any] = {"name": username}
         if reason:
             data["reason"] = reason
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="ban",
             body=data,
@@ -893,7 +900,8 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Vote to skip current media."""
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="voteskip",
             body={},
@@ -926,7 +934,8 @@ class KrytenClient:
             >>> await client.assign_leader("lounge", "alice")
             >>> await client.assign_leader("lounge", "")  # Remove leader
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="assignLeader",
             body={"name": username},
@@ -957,7 +966,8 @@ class KrytenClient:
         Example:
             >>> await client.mute_user("lounge", "spammer")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="chat",
             body={"message": f"/mute {username}"},
@@ -990,7 +1000,8 @@ class KrytenClient:
         Example:
             >>> await client.shadow_mute_user("lounge", "subtle_troll")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="chat",
             body={"message": f"/smute {username}"},
@@ -1019,7 +1030,8 @@ class KrytenClient:
         Example:
             >>> await client.unmute_user("lounge", "reformed_user")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="chat",
             body={"message": f"/unmute {username}"},
@@ -1048,7 +1060,8 @@ class KrytenClient:
         Example:
             >>> await client.play_next("lounge")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="playNext",
             body={},
@@ -1079,7 +1092,8 @@ class KrytenClient:
         Example:
             >>> await client.set_motd("lounge", "<h1>Welcome!</h1>")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="setMotd",
             body={"motd": motd},
@@ -1110,7 +1124,8 @@ class KrytenClient:
             >>> css_content = "body { background: #000; }"
             >>> await client.set_channel_css("lounge", css_content)
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="setChannelCSS",
             body={"css": css},
@@ -1141,7 +1156,8 @@ class KrytenClient:
             >>> js_content = "console.log('Hello');"
             >>> await client.set_channel_js("lounge", js_content)
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="setChannelJS",
             body={"js": js},
@@ -1185,7 +1201,8 @@ class KrytenClient:
             >>> opts = {"allow_voteskip": True, "voteskip_ratio": 0.5}
             >>> await client.set_options("lounge", opts)
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="setOptions",
             body={"options": options},
@@ -1225,7 +1242,8 @@ class KrytenClient:
             >>> perms = {"kick": 2, "ban": 3}
             >>> await client.set_permissions("lounge", perms)
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="setPermissions",
             body={"permissions": permissions},
@@ -1258,7 +1276,8 @@ class KrytenClient:
         Example:
             >>> await client.update_emote("lounge", "CustomEmote", "abc123", "imgur")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="updateEmote",
             body={"name": name, "image": image, "source": source},
@@ -1287,7 +1306,8 @@ class KrytenClient:
         Example:
             >>> await client.remove_emote("lounge", "CustomEmote")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="removeEmote",
             body={"name": name},
@@ -1328,7 +1348,8 @@ class KrytenClient:
             ...     "lounge", "badword", r"\\bbad\\b", "gi", "***"
             ... )
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="addFilter",
             body={
@@ -1376,7 +1397,8 @@ class KrytenClient:
             ...     "lounge", "badword", r"\\bbad\\b", "gi", "###"
             ... )
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="updateFilter",
             body={
@@ -1412,7 +1434,8 @@ class KrytenClient:
         Example:
             >>> await client.remove_filter("lounge", "badword")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="removeFilter",
             body={"name": name},
@@ -1451,7 +1474,8 @@ class KrytenClient:
             ...     "lounge", "Favorite color?", ["Red", "Blue", "Green"]
             ... )
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="newPoll",
             body={
@@ -1485,7 +1509,8 @@ class KrytenClient:
         Example:
             >>> await client.vote("lounge", 0)  # Vote for first option
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="vote",
             body={"option": option},
@@ -1512,7 +1537,8 @@ class KrytenClient:
         Example:
             >>> await client.close_poll("lounge")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="closePoll",
             body={},
@@ -1548,7 +1574,8 @@ class KrytenClient:
         Example:
             >>> await client.set_channel_rank("lounge", "Alice", 2)  # Make moderator
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="setChannelRank",
             body={"username": username, "rank": rank},
@@ -1576,7 +1603,8 @@ class KrytenClient:
         Example:
             >>> await client.request_channel_ranks("lounge")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="requestChannelRanks",
             body={},
@@ -1604,7 +1632,8 @@ class KrytenClient:
         Example:
             >>> await client.request_banlist("lounge")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="requestBanlist",
             body={},
@@ -1633,7 +1662,8 @@ class KrytenClient:
         Example:
             >>> await client.unban("lounge", 12345)
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="unban",
             body={"id": ban_id},
@@ -1663,7 +1693,8 @@ class KrytenClient:
         Example:
             >>> await client.read_chan_log("lounge", 50)
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="readChanLog",
             body={"count": count},
@@ -1695,7 +1726,8 @@ class KrytenClient:
         Example:
             >>> await client.search_library("lounge", "funny video")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="searchMedia",
             body={"query": query, "source": source},
@@ -1724,7 +1756,8 @@ class KrytenClient:
         Example:
             >>> await client.delete_from_library("lounge", "yt:abc123")
         """
-        return await self.__send_command(service="robot",
+        return await self.__send_command(
+            service="robot",
             channel=channel,
             type="uncache",
             body={"id": media_id},
@@ -2191,10 +2224,14 @@ class KrytenClient:
                 )
                 # Check filters
                 if channel_filter and channel_filter != raw_event.channel:
-                    self.logger.debug(f"Handler filtered out by channel: {channel_filter} != {raw_event.channel}")
+                    self.logger.debug(
+                        f"Handler filtered out by channel: {channel_filter} != {raw_event.channel}"
+                    )
                     continue
                 if domain_filter and domain_filter != raw_event.domain:
-                    self.logger.debug(f"Handler filtered out by domain: {domain_filter} != {raw_event.domain}")
+                    self.logger.debug(
+                        f"Handler filtered out by domain: {domain_filter} != {raw_event.domain}"
+                    )
                     continue
 
                 # Create task for handler
@@ -2256,7 +2293,11 @@ class KrytenClient:
 
                 # Time is Unix timestamp in milliseconds
                 time_ms = payload.get("time", 0)
-                timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
+                timestamp = (
+                    datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                    if time_ms
+                    else raw_event.timestamp
+                )
 
                 return ChatMessageEvent(
                     username=username,
@@ -2279,7 +2320,11 @@ class KrytenClient:
 
                 message = payload.get("msg", payload.get("message", ""))
                 time_ms = payload.get("time", 0)
-                timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
+                timestamp = (
+                    datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                    if time_ms
+                    else raw_event.timestamp
+                )
 
                 return ChatMessageEvent(
                     username=username,
@@ -2295,7 +2340,11 @@ class KrytenClient:
                 username = payload.get("name", "")
                 rank = payload.get("rank", 0)
                 time_ms = payload.get("time", 0)
-                timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
+                timestamp = (
+                    datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                    if time_ms
+                    else raw_event.timestamp
+                )
 
                 return UserJoinEvent(
                     username=username,
@@ -2309,7 +2358,11 @@ class KrytenClient:
             elif event_name == "userleave":
                 username = payload.get("name", "")
                 time_ms = payload.get("time", 0)
-                timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
+                timestamp = (
+                    datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                    if time_ms
+                    else raw_event.timestamp
+                )
 
                 return UserLeaveEvent(
                     username=username,
@@ -2326,7 +2379,11 @@ class KrytenClient:
                 duration = payload.get("seconds", 0)
                 uid = payload.get("uid", 0)
                 time_ms = payload.get("time", 0)
-                timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
+                timestamp = (
+                    datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                    if time_ms
+                    else raw_event.timestamp
+                )
 
                 return ChangeMediaEvent(
                     media_type=media_type,
@@ -2344,7 +2401,11 @@ class KrytenClient:
                 action = payload.get("action", "")
                 uid = payload.get("uid")
                 time_ms = payload.get("time", 0)
-                timestamp = datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc) if time_ms else raw_event.timestamp
+                timestamp = (
+                    datetime.fromtimestamp(time_ms / 1000, tz=timezone.utc)
+                    if time_ms
+                    else raw_event.timestamp
+                )
 
                 return PlaylistUpdateEvent(
                     action=action,
@@ -2364,9 +2425,7 @@ class KrytenClient:
         # Default: return raw event if conversion fails or event type unknown
         return raw_event
 
-    async def _invoke_handler(
-        self, handler: Callable[[Any], Any], event: RawEvent
-    ) -> None:
+    async def _invoke_handler(self, handler: Callable[[Any], Any], event: RawEvent) -> None:
         """Invoke event handler with timeout."""
         try:
             # Convert RawEvent to specific typed event based on event_name
@@ -2388,8 +2447,6 @@ class KrytenClient:
                 exc_info=True,
             )
 
-
-
     async def _on_error(self, e: Exception) -> None:
         """Handle NATS error.
 
@@ -2400,16 +2457,19 @@ class KrytenClient:
 
         # Check if this is a connection-related error (expected during reconnection)
         error_str = str(e).lower()
-        is_connection_error = any(term in error_str for term in [
-            "connection refused",
-            "connection reset",
-            "connection closed",
-            "timed out",
-            "timeout",
-            "winerror 1225",  # Windows connection refused
-            "errno 111",      # Linux connection refused
-            "errno 104",      # Linux connection reset
-        ])
+        is_connection_error = any(
+            term in error_str
+            for term in [
+                "connection refused",
+                "connection reset",
+                "connection closed",
+                "timed out",
+                "timeout",
+                "winerror 1225",  # Windows connection refused
+                "errno 111",  # Linux connection refused
+                "errno 104",  # Linux connection reset
+            ]
+        )
 
         if is_connection_error:
             # Expected during reconnection attempts - log without traceback
@@ -2472,17 +2532,11 @@ class KrytenClient:
 
         # Build unified command request
         subject = "kryten.robot.command"
-        request = {
-            "service": "robot",
-            "command": "state.user",
-            "username": username
-        }
+        request = {"service": "robot", "command": "state.user", "username": username}
 
         try:
             response = await self.__nats.request(
-                subject=subject,
-                payload=json.dumps(request).encode(),
-                timeout=timeout
+                subject=subject, payload=json.dumps(request).encode(), timeout=timeout
             )
 
             result = json.loads(response.data.decode("utf-8"))
@@ -2535,17 +2589,11 @@ class KrytenClient:
 
         # Build unified command request
         subject = "kryten.robot.command"
-        request = {
-            "service": "robot",
-            "command": "state.user",
-            "username": username
-        }
+        request = {"service": "robot", "command": "state.user", "username": username}
 
         try:
             response = await self.__nats.request(
-                subject=subject,
-                payload=json.dumps(request).encode(),
-                timeout=timeout
+                subject=subject, payload=json.dumps(request).encode(), timeout=timeout
             )
 
             result = json.loads(response.data.decode("utf-8"))
@@ -2595,16 +2643,11 @@ class KrytenClient:
 
         # Build unified command request
         subject = "kryten.robot.command"
-        request = {
-            "service": "robot",
-            "command": "state.profiles"
-        }
+        request = {"service": "robot", "command": "state.profiles"}
 
         try:
             response = await self.__nats.request(
-                subject=subject,
-                payload=json.dumps(request).encode(),
-                timeout=timeout
+                subject=subject, payload=json.dumps(request).encode(), timeout=timeout
             )
 
             result = json.loads(response.data.decode("utf-8"))
@@ -2670,16 +2713,16 @@ class KrytenClient:
 
         try:
             response = await self.__nats.request(
-                subject=subject,
-                payload=json.dumps({}).encode(),
-                timeout=timeout
+                subject=subject, payload=json.dumps({}).encode(), timeout=timeout
             )
 
             result = json.loads(response.data.decode("utf-8"))
             return result
 
         except asyncio.TimeoutError:
-            self.logger.warning(f"User level query timed out for {domain}/{channel} (Kryten-Robot may not be running)")
+            self.logger.warning(
+                f"User level query timed out for {domain}/{channel} (Kryten-Robot may not be running)"
+            )
             return {"success": False, "error": "Timeout - Kryten-Robot not responding"}
         except Exception as e:
             self.logger.error(f"Error querying user level: {e}", exc_info=True)
@@ -2747,11 +2790,7 @@ class KrytenClient:
         )
 
     async def kv_get(
-        self,
-        bucket_name: str,
-        key: str,
-        default: Any = None,
-        parse_json: bool = False
+        self, bucket_name: str, key: str, default: Any = None, parse_json: bool = False
     ) -> Any:
         """Get value from KeyValue store.
 
@@ -2773,13 +2812,7 @@ class KrytenClient:
         kv = await get_kv_store(self.__nats, bucket_name)
         return await kv_get(kv, key, default=default, parse_json=parse_json)
 
-    async def kv_put(
-        self,
-        bucket_name: str,
-        key: str,
-        value: Any,
-        as_json: bool = False
-    ) -> None:
+    async def kv_put(self, bucket_name: str, key: str, value: Any, as_json: bool = False) -> None:
         """Put value into KeyValue store.
 
         Args:
@@ -2832,11 +2865,7 @@ class KrytenClient:
         kv = await get_kv_store(self.__nats, bucket_name)
         return await kv_keys(kv)
 
-    async def kv_get_all(
-        self,
-        bucket_name: str,
-        parse_json: bool = False
-    ) -> dict[str, Any]:
+    async def kv_get_all(self, bucket_name: str, parse_json: bool = False) -> dict[str, Any]:
         """Get all key-value pairs from KeyValue store.
 
         Args:
@@ -2947,24 +2976,24 @@ class KrytenClient:
             """Wrapper to handle NATS message and send reply."""
             try:
                 # Parse request
-                request = json.loads(msg.data.decode('utf-8'))
+                request = json.loads(msg.data.decode("utf-8"))
 
                 # Call handler
                 response = await handler(request)
 
                 # Send reply
-                reply_payload = json.dumps(response).encode('utf-8')
+                reply_payload = json.dumps(response).encode("utf-8")
                 await self.__nats.publish(msg.reply, reply_payload)
 
             except json.JSONDecodeError as e:
                 self.logger.error("Invalid JSON in request: %s", e)
-                error_response = json.dumps({"error": "Invalid JSON"}).encode('utf-8')
+                error_response = json.dumps({"error": "Invalid JSON"}).encode("utf-8")
                 if msg.reply:
                     await self.__nats.publish(msg.reply, error_response)
             except Exception:  # noqa: BLE001
                 self.logger.exception("Error in request handler")
                 # Send error response
-                error_response = json.dumps({"error": "Internal error"}).encode('utf-8')
+                error_response = json.dumps({"error": "Internal error"}).encode("utf-8")
                 if msg.reply:
                     await self.__nats.publish(msg.reply, error_response)
 
@@ -3006,9 +3035,9 @@ class KrytenClient:
             raise KrytenConnectionError("Not connected to NATS")
 
         try:
-            payload = json.dumps(request).encode('utf-8')
+            payload = json.dumps(request).encode("utf-8")
             response = await self.__nats.request(subject, payload, timeout=timeout)
-            return json.loads(response.data.decode('utf-8'))
+            return json.loads(response.data.decode("utf-8"))
         except asyncio.TimeoutError as e:
             raise TimeoutError(f"NATS request timeout on {subject}") from e
 
@@ -3037,10 +3066,7 @@ class KrytenClient:
             >>> for ch in channels:
             ...     print(f"{ch['domain']}/{ch['channel']}")
         """
-        request = {
-            "service": "robot",
-            "command": "system.channels"
-        }
+        request = {"service": "robot", "command": "system.channels"}
 
         response = await self.nats_request("kryten.robot.command", request, timeout)
 
@@ -3082,10 +3108,7 @@ class KrytenClient:
             >>> if pkg_version.parse(version) < pkg_version.parse("0.5.0"):
             ...     raise RuntimeError("Requires Kryten-Robot >= 0.5.0")
         """
-        request = {
-            "service": "robot",
-            "command": "system.version"
-        }
+        request = {"service": "robot", "command": "system.version"}
 
         response = await self.nats_request("kryten.robot.command", request, timeout)
 
@@ -3148,10 +3171,7 @@ class KrytenClient:
             >>> print(f"Event rate: {stats['events']['rate_1min']:.2f}/sec")
             >>> print(f"Memory usage: {stats['memory']['rss_mb']:.1f} MB")
         """
-        request = {
-            "service": "robot",
-            "command": "system.stats"
-        }
+        request = {"service": "robot", "command": "system.stats"}
 
         response = await self.nats_request("kryten.robot.command", request, timeout)
 
@@ -3194,10 +3214,7 @@ class KrytenClient:
             >>> # Passwords are automatically redacted:
             >>> print(config['nats']['password'])  # "***REDACTED***"
         """
-        request = {
-            "service": "robot",
-            "command": "system.config"
-        }
+        request = {"service": "robot", "command": "system.config"}
 
         response = await self.nats_request("kryten.robot.command", request, timeout)
 
@@ -3250,10 +3267,7 @@ class KrytenClient:
             ...     if svc["health_url"]:
             ...         print(f"    Health: {svc['health_url']}")
         """
-        request = {
-            "service": "robot",
-            "command": "system.services"
-        }
+        request = {"service": "robot", "command": "system.services"}
 
         response = await self.nats_request("kryten.robot.command", request, timeout)
 
@@ -3298,10 +3312,7 @@ class KrytenClient:
             ... except TimeoutError:
             ...     print("Robot is not responding")
         """
-        request = {
-            "service": "robot",
-            "command": "system.ping"
-        }
+        request = {"service": "robot", "command": "system.ping"}
 
         response = await self.nats_request("kryten.robot.command", request, timeout)
 
@@ -3317,9 +3328,7 @@ class KrytenClient:
         return ping_result
 
     async def reload_config(
-        self,
-        config_path: str | None = None,
-        timeout: float = 5.0
+        self, config_path: str | None = None, timeout: float = 5.0
     ) -> dict[str, Any]:
         """Reload configuration on Kryten-Robot.
 
@@ -3355,10 +3364,7 @@ class KrytenClient:
             >>> # Reload from specific file
             >>> result = await client.reload_config("/path/to/config.json")
         """
-        request = {
-            "service": "robot",
-            "command": "system.reload"
-        }
+        request = {"service": "robot", "command": "system.reload"}
 
         if config_path:
             request["config_path"] = config_path
@@ -3380,7 +3386,7 @@ class KrytenClient:
         self,
         delay_seconds: int = 0,
         reason: str = "Remote shutdown via client",
-        timeout: float = 5.0
+        timeout: float = 5.0,
     ) -> dict[str, Any]:
         """Initiate graceful shutdown of Kryten-Robot.
 
@@ -3425,7 +3431,7 @@ class KrytenClient:
             "service": "robot",
             "command": "system.shutdown",
             "delay_seconds": delay_seconds,
-            "reason": reason
+            "reason": reason,
         }
 
         response = await self.nats_request("kryten.robot.command", request, timeout)

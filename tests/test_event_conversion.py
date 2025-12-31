@@ -43,6 +43,7 @@ async def test_chatmsg_conversion_nested_user(mock_config):
         )
 
         import asyncio
+
         await asyncio.sleep(0.1)
 
         assert len(received_events) == 1
@@ -70,6 +71,7 @@ async def test_chatmsg_conversion_flat_structure(mock_config):
         )
 
         import asyncio
+
         await asyncio.sleep(0.1)
 
         assert len(received_events) == 1
@@ -97,6 +99,7 @@ async def test_pm_conversion(mock_config):
         )
 
         import asyncio
+
         await asyncio.sleep(0.1)
 
         assert len(received_events) == 1
@@ -124,6 +127,7 @@ async def test_adduser_conversion(mock_config):
         )
 
         import asyncio
+
         await asyncio.sleep(0.1)
 
         assert len(received_events) == 1
@@ -150,6 +154,7 @@ async def test_userleave_conversion(mock_config):
         )
 
         import asyncio
+
         await asyncio.sleep(0.1)
 
         assert len(received_events) == 1
@@ -182,6 +187,7 @@ async def test_changemedia_conversion(mock_config):
         )
 
         import asyncio
+
         await asyncio.sleep(0.1)
 
         assert len(received_events) == 1
@@ -211,6 +217,7 @@ async def test_playlist_conversion(mock_config):
         )
 
         import asyncio
+
         await asyncio.sleep(0.1)
 
         assert len(received_events) == 1
@@ -237,6 +244,7 @@ async def test_unknown_event_returns_raw(mock_config):
         )
 
         import asyncio
+
         await asyncio.sleep(0.1)
 
         assert len(received_events) == 1
