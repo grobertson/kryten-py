@@ -249,6 +249,47 @@ class KrytenClient:
             self._nats = None
             self._connection_time = None
 
+    async def get_kv_store(self, bucket_name: str) -> Any:
+        """Get an existing NATS JetStream KeyValue store.
+
+        Args:
+            bucket_name: Name of the KV bucket.
+
+        Returns:
+            KeyValue bucket instance.
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+        """
+        if not self._connected or self._nats is None:
+            raise KrytenConnectionError("Not connected to NATS")
+        return await get_kv_store(self._nats, bucket_name, self.logger)
+
+    async def get_or_create_kv_store(
+        self,
+        bucket_name: str,
+        description: str | None = None,
+        max_value_size: int = 1024 * 1024,
+    ) -> Any:
+        """Get or create a NATS JetStream KeyValue store.
+
+        Args:
+            bucket_name: Name of the KV bucket.
+            description: Description for the bucket (used on creation).
+            max_value_size: Maximum value size in bytes (default 1MB).
+
+        Returns:
+            KeyValue bucket instance.
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+        """
+        if not self._connected or self._nats is None:
+            raise KrytenConnectionError("Not connected to NATS")
+        return await get_or_create_kv_store(
+            self._nats, bucket_name, description, max_value_size, self.logger
+        )
+
     @property
     def lifecycle(self) -> LifecycleEventPublisher | None:
         """Get the lifecycle event publisher (if service config provided).
