@@ -95,9 +95,9 @@ class KrytenClient:
         self._connection_time: float | None = None
 
         # Event handlers: {event_name: [(handler, channel_filter, domain_filter), ...]}
-        self._handlers: dict[str, list[tuple[Callable[[Any], Any], str | None, str | None]]] = (
-            defaultdict(list)
-        )
+        self._handlers: dict[
+            str, list[tuple[Callable[[Any], Any], str | None, str | None]]
+        ] = defaultdict(list)
 
         # Subscriptions
         self._subscriptions: list[Any] = []
