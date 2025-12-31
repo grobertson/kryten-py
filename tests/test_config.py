@@ -5,9 +5,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
 from kryten.config import ChannelConfig, KrytenConfig, NatsConfig, ServiceConfig
-from kryten.exceptions import KrytenValidationError
 
 
 def test_nats_config_valid():

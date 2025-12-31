@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.6] - 2025-12-31
+
+### Fixed
+- **Linting**: Resolved various Ruff and Pylint errors (import sorting, whitespace, line length).
+- **Tests**: Fixed `pytest.raises(Exception)` anti-pattern in `test_models.py` (switched to specific exceptions).
+- **Examples**: Fixed undefined variables (`kv`, `kv_put`) in `examples/lifecycle_and_kv_example.py` by using `client.kv_put`.
+- **Mock Client**: 
+  - Renamed `send_command_v2` to `send_command` in `MockKrytenClient` to match `KrytenClient` interface.
+  - Aligned `send_command` arguments with `KrytenClient` (type, body, domain, channel).
+  - Fixed null channel access in `send_command` by using first configured channel if None.
+
 ## [0.10.5] - 2025-12-28
 
 ### Changed

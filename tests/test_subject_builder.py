@@ -1,7 +1,6 @@
 """Tests for subject builder."""
 
 import pytest
-
 from kryten.models import RawEvent
 from kryten.subject_builder import (
     build_command_subject,

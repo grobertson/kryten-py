@@ -9,8 +9,7 @@ import logging
 from typing import Any
 
 from nats.aio.client import Client as NATSClient
-from nats.js import JetStreamContext
-from nats.js import api
+from nats.js import JetStreamContext, api
 
 
 async def get_kv_store(

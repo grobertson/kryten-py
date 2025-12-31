@@ -3,7 +3,7 @@
 import asyncio
 import logging
 
-from kryten import KrytenClient, ChatMessageEvent
+from kryten import ChatMessageEvent, KrytenClient
 
 
 async def main():

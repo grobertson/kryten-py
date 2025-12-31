@@ -1,16 +1,15 @@
 """Tests for event conversion from RawEvent to typed events."""
 
-import pytest
-from datetime import datetime, timezone
 
+import pytest
 from kryten import MockKrytenClient
 from kryten.models import (
-    ChatMessageEvent,
-    UserJoinEvent,
-    UserLeaveEvent,
     ChangeMediaEvent,
+    ChatMessageEvent,
     PlaylistUpdateEvent,
     RawEvent,
+    UserJoinEvent,
+    UserLeaveEvent,
 )
 
 

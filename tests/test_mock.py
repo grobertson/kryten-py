@@ -1,7 +1,6 @@
 """Tests for MockKrytenClient."""
 
 import pytest
-
 from kryten.mock import MockKrytenClient
 
 

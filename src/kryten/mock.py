@@ -122,11 +122,13 @@ class MockKrytenClient:
         service: str,
         type: str,
         body: dict[str, Any],
-        channel: str | None = None,
         domain: str | None = None,
-    ) -> None:
+        channel: str | None = None,
+    ) -> str:
         """Mock generic send command."""
-        self._record_command(channel, type, body, domain)
+        if channel is None:
+            channel = self.config.channels[0].channel
+        return self._record_command(channel, type, body, domain, service=service)
 
     async def send_chat(
         self,
@@ -410,27 +412,6 @@ class MockKrytenClient:
             for c in self.config.channels
         ]
 
-    async def send_command(
-        self,
-        service: str,
-        type: str,
-        body: dict[str, Any],
-        channel: str | None = None,
-        domain: str | None = None,
-    ) -> str:
-        """Mock generic command sending."""
-        # For mock purposes, we map this to _record_command.
-        # Note: _record_command signature is (channel, type, body, domain)
-        # It doesn't take 'service'. We can ignore service or encode it in type?
-        # Let's verify _record_command signature by looking at usage:
-        # self._record_command(channel, "chat", ...)
-        
-        # We'll just pass it through. If tests inspect published commands, 
-        # they will see 'type' and 'body'.
-        # If 'service' is important for test assertions, we might need to update _record_command.
-        # But for now, let's just make it work.
-        return self._record_command(channel, type, body, domain)
-
     def get_published_commands(self) -> list[dict[str, Any]]:
         """Get list of all published commands for verification.
 
@@ -632,6 +613,7 @@ class MockKrytenClient:
         action: str,
         data: dict[str, Any],
         domain: str | None,
+        service: str = "cytube",
     ) -> str:
         """Record a published command."""
         import uuid
@@ -639,7 +621,7 @@ class MockKrytenClient:
         correlation_id = str(uuid.uuid4())
 
         command = {
-            "subject": f"cytube.commands.{channel.lower()}.{action.lower()}",
+            "subject": f"{service}.commands.{channel.lower()}.{action.lower()}",
             "action": action,
             "data": data,
             "channel": channel,

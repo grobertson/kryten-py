@@ -220,9 +220,9 @@ def build_command_subject(service: str, domain: str = "", channel: str = "", act
         raise ValueError("Service cannot be empty")
 
     service_clean = normalize_token(service)
-    
+
     # New style: kryten.{service}.command
-    # We ignore domain/channel/action here as the new requirement 
+    # We ignore domain/channel/action here as the new requirement
     # specified "kryten.robot.command" or "kryten.llm.command"
     return f"kryten.{service_clean}.command"
 

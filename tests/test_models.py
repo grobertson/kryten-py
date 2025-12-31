@@ -3,7 +3,6 @@
 from datetime import datetime, timezone
 
 import pytest
-
 from kryten.models import (
     ChangeMediaEvent,
     ChatMessageEvent,
@@ -40,7 +39,7 @@ def test_raw_event_immutable():
         domain="cytu.be",
     )
 
-    with pytest.raises(Exception):  # Pydantic raises ValidationError
+    with pytest.raises(Exception):  # noqa: B017
         event.event_name = "different"
 
 
@@ -74,6 +73,16 @@ def test_chat_message_event():
     assert event.username == "alice"
     assert event.message == "Hello world!"
     assert event.rank == 1
+
+    with pytest.raises(ValueError):
+        ChatMessageEvent(
+            username="user",
+            message="msg",
+            timestamp=datetime.now(),
+            rank=0,
+            channel="ch",
+            domain="dom"
+        )
 
 
 def test_user_join_event():

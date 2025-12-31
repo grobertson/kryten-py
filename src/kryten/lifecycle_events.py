@@ -272,11 +272,11 @@ class LifecycleEventPublisher:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "uptime_seconds": uptime,
         }
-        
+
         # Include custom metadata (health/metrics endpoints, etc.)
         if self._custom_metadata:
             payload["metadata"] = self._custom_metadata.copy()
-        
+
         return payload
 
     def set_endpoints(
@@ -287,16 +287,16 @@ class LifecycleEventPublisher:
         metrics_path: str = "/metrics",
     ) -> None:
         """Set health and metrics endpoint information for service discovery.
-        
+
         This information is included in startup and heartbeat events, allowing
         other services to discover how to reach this service's endpoints.
-        
+
         Args:
             health_port: Port for health endpoint (e.g., 8080)
             metrics_port: Port for metrics endpoint (e.g., 9090)
             health_path: Path for health endpoint (default: /health)
             metrics_path: Path for metrics endpoint (default: /metrics)
-        
+
         Examples:
             >>> lifecycle.set_endpoints(health_port=8080, metrics_port=9090)
             >>> lifecycle.set_endpoints(health_port=28282)  # Same port for both

@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from kryten import KrytenClient
+from kryten import KrytenClient  # noqa: E402
 
 
 async def debug_events():
@@ -16,15 +16,15 @@ async def debug_events():
         "nats": {"servers": ["nats://localhost:4222"]},
         "channels": [{"domain": "cytu.be", "channel": "420grindhouse"}]
     }
-    
+
     client = KrytenClient(config)
     await client.connect()
-    
+
     try:
         stats = await client.get_stats()
         print("Events structure:")
         print(json.dumps(stats.get("events", {}), indent=2))
-        
+
     finally:
         await client.disconnect()
 

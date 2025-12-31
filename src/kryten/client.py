@@ -495,7 +495,7 @@ class KrytenClient:
             self.logger.warning(
                 f"Use 'send_command()' instead of 'publish()' for sending commands: {subject}"
             )
-        elif self.config.service and subject.startswith(f"kryten.events."):
+        elif self.config.service and subject.startswith("kryten.events."):
             # Check if event is from this service
             expected_prefix = f"kryten.events.{self.config.service.name}."
             if "cytube" in subject:
@@ -503,7 +503,7 @@ class KrytenClient:
                     f"Publishing to legacy 'kryten.events.cytube.*' subject: {subject}. "
                     "This format is deprecated."
                 )
-            elif not subject.startswith(expected_prefix): 
+            elif not subject.startswith(expected_prefix):
                 self.logger.warning(
                     f"Publishing event to foreign service subject: {subject}. "
                     f"Expected prefix: {expected_prefix}"
@@ -528,7 +528,7 @@ class KrytenClient:
         """Send a command to a specific service.
 
         This is a public wrapper around __send_command for external usage (e.g. by kryten-playlist).
-        
+
         Args:
             service: Target service (e.g., 'robot', 'llm', 'playlist')
             type: Command type identifier
@@ -587,7 +587,7 @@ class KrytenClient:
         #   "args": { ... },
         #   "meta": { ... }
         # }
-        
+
         args = body if isinstance(body, dict) else {"value": body}
         request_id = str(uuid.uuid4())
 
@@ -690,7 +690,7 @@ class KrytenClient:
 
         Returns:
             Correlation ID
-        
+
         Examples:
             >>> await client.add_media("lounge", "yt", "dQw4w9WgXcQ")
         """
@@ -719,7 +719,7 @@ class KrytenClient:
         Returns:
             Correlation ID
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="delete",
             body={"uid": uid},
@@ -735,7 +735,7 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Move media to new position in playlist."""
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="move",
             body={"from": uid, "after": position},
@@ -750,7 +750,7 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Jump to specific media in playlist."""
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="jump",
             body={"uid": uid},
@@ -764,7 +764,7 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Clear entire playlist."""
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="clear",
             body={},
@@ -778,7 +778,7 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Shuffle playlist order."""
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="shuffle",
             body={},
@@ -794,7 +794,7 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Set temporary flag on playlist item."""
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="settemp",
             body={"uid": uid, "temp": is_temp},
@@ -810,7 +810,7 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Pause current media."""
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="pause",
             body={},
@@ -824,7 +824,7 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Resume playback."""
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="play",
             body={},
@@ -839,7 +839,7 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Seek to specific time in current media."""
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="seek",
             body={"time": time_seconds},
@@ -860,7 +860,7 @@ class KrytenClient:
         data: dict[str, Any] = {"name": username}
         if reason:
             data["reason"] = reason
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="kick",
             body=data,
@@ -879,7 +879,7 @@ class KrytenClient:
         data: dict[str, Any] = {"name": username}
         if reason:
             data["reason"] = reason
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="ban",
             body=data,
@@ -893,7 +893,7 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Vote to skip current media."""
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="voteskip",
             body={},
@@ -926,7 +926,7 @@ class KrytenClient:
             >>> await client.assign_leader("lounge", "alice")
             >>> await client.assign_leader("lounge", "")  # Remove leader
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="assignLeader",
             body={"name": username},
@@ -957,7 +957,7 @@ class KrytenClient:
         Example:
             >>> await client.mute_user("lounge", "spammer")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="chat",
             body={"message": f"/mute {username}"},
@@ -990,7 +990,7 @@ class KrytenClient:
         Example:
             >>> await client.shadow_mute_user("lounge", "subtle_troll")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="chat",
             body={"message": f"/smute {username}"},
@@ -1019,7 +1019,7 @@ class KrytenClient:
         Example:
             >>> await client.unmute_user("lounge", "reformed_user")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="chat",
             body={"message": f"/unmute {username}"},
@@ -1048,7 +1048,7 @@ class KrytenClient:
         Example:
             >>> await client.play_next("lounge")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="playNext",
             body={},
@@ -1079,7 +1079,7 @@ class KrytenClient:
         Example:
             >>> await client.set_motd("lounge", "<h1>Welcome!</h1>")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="setMotd",
             body={"motd": motd},
@@ -1110,7 +1110,7 @@ class KrytenClient:
             >>> css_content = "body { background: #000; }"
             >>> await client.set_channel_css("lounge", css_content)
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="setChannelCSS",
             body={"css": css},
@@ -1141,7 +1141,7 @@ class KrytenClient:
             >>> js_content = "console.log('Hello');"
             >>> await client.set_channel_js("lounge", js_content)
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="setChannelJS",
             body={"js": js},
@@ -1185,7 +1185,7 @@ class KrytenClient:
             >>> opts = {"allow_voteskip": True, "voteskip_ratio": 0.5}
             >>> await client.set_options("lounge", opts)
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="setOptions",
             body={"options": options},
@@ -1225,7 +1225,7 @@ class KrytenClient:
             >>> perms = {"kick": 2, "ban": 3}
             >>> await client.set_permissions("lounge", perms)
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="setPermissions",
             body={"permissions": permissions},
@@ -1258,7 +1258,7 @@ class KrytenClient:
         Example:
             >>> await client.update_emote("lounge", "CustomEmote", "abc123", "imgur")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="updateEmote",
             body={"name": name, "image": image, "source": source},
@@ -1287,7 +1287,7 @@ class KrytenClient:
         Example:
             >>> await client.remove_emote("lounge", "CustomEmote")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="removeEmote",
             body={"name": name},
@@ -1328,7 +1328,7 @@ class KrytenClient:
             ...     "lounge", "badword", r"\\bbad\\b", "gi", "***"
             ... )
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="addFilter",
             body={
@@ -1376,7 +1376,7 @@ class KrytenClient:
             ...     "lounge", "badword", r"\\bbad\\b", "gi", "###"
             ... )
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="updateFilter",
             body={
@@ -1412,7 +1412,7 @@ class KrytenClient:
         Example:
             >>> await client.remove_filter("lounge", "badword")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="removeFilter",
             body={"name": name},
@@ -1451,7 +1451,7 @@ class KrytenClient:
             ...     "lounge", "Favorite color?", ["Red", "Blue", "Green"]
             ... )
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="newPoll",
             body={
@@ -1485,7 +1485,7 @@ class KrytenClient:
         Example:
             >>> await client.vote("lounge", 0)  # Vote for first option
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="vote",
             body={"option": option},
@@ -1512,7 +1512,7 @@ class KrytenClient:
         Example:
             >>> await client.close_poll("lounge")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="closePoll",
             body={},
@@ -1548,7 +1548,7 @@ class KrytenClient:
         Example:
             >>> await client.set_channel_rank("lounge", "Alice", 2)  # Make moderator
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="setChannelRank",
             body={"username": username, "rank": rank},
@@ -1576,7 +1576,7 @@ class KrytenClient:
         Example:
             >>> await client.request_channel_ranks("lounge")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="requestChannelRanks",
             body={},
@@ -1604,7 +1604,7 @@ class KrytenClient:
         Example:
             >>> await client.request_banlist("lounge")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="requestBanlist",
             body={},
@@ -1633,7 +1633,7 @@ class KrytenClient:
         Example:
             >>> await client.unban("lounge", 12345)
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="unban",
             body={"id": ban_id},
@@ -1663,7 +1663,7 @@ class KrytenClient:
         Example:
             >>> await client.read_chan_log("lounge", 50)
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="readChanLog",
             body={"count": count},
@@ -1695,7 +1695,7 @@ class KrytenClient:
         Example:
             >>> await client.search_library("lounge", "funny video")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="searchMedia",
             body={"query": query, "source": source},
@@ -1724,7 +1724,7 @@ class KrytenClient:
         Example:
             >>> await client.delete_from_library("lounge", "yt:abc123")
         """
-        return await self.__send_command(service="robot", 
+        return await self.__send_command(service="robot",
             channel=channel,
             type="uncache",
             body={"id": media_id},
@@ -2392,12 +2392,12 @@ class KrytenClient:
 
     async def _on_error(self, e: Exception) -> None:
         """Handle NATS error.
-        
+
         Connection-related errors during reconnection are expected and logged
         at WARNING level. Other errors are logged at ERROR with full traceback.
         """
         self._errors += 1
-        
+
         # Check if this is a connection-related error (expected during reconnection)
         error_str = str(e).lower()
         is_connection_error = any(term in error_str for term in [
@@ -2410,7 +2410,7 @@ class KrytenClient:
             "errno 111",      # Linux connection refused
             "errno 104",      # Linux connection reset
         ])
-        
+
         if is_connection_error:
             # Expected during reconnection attempts - log without traceback
             self.logger.warning(f"NATS connection error (will retry): {e}")

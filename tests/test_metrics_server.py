@@ -1,10 +1,8 @@
 """Tests for metrics server."""
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock
-from aiohttp import web
-from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
+from unittest.mock import MagicMock
 
+import pytest
 from kryten.metrics_server import BaseMetricsServer, SimpleMetricsServer
 
 
