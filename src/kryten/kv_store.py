@@ -20,7 +20,7 @@ async def get_kv_store(
     This function only binds to existing buckets. It does NOT create buckets
     because bucket creation requires specific configuration (max_value_size, etc.)
     that varies by use case. Bucket creation is the responsibility of the service
-    that owns the data (typically kryten-robot).
+    that owns the data (not always kryten-robot).
 
     Args:
         nats_client: Connected NATS client.
@@ -274,6 +274,7 @@ async def kv_get_all(
 
 __all__ = [
     "get_kv_store",
+    "get_or_create_kv_store",
     "kv_get",
     "kv_put",
     "kv_delete",
