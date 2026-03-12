@@ -759,7 +759,7 @@ class KrytenClient:
         return await self.__send_command(
             service="robot",
             channel=channel,
-            type="delete",
+            type="rmvideo",
             body={"uid": uid},
             domain=domain,
         )
@@ -776,7 +776,7 @@ class KrytenClient:
         return await self.__send_command(
             service="robot",
             channel=channel,
-            type="move",
+            type="mvvideo",
             body={"from": uid, "after": position},
             domain=domain,
         )
@@ -2965,12 +2965,13 @@ class KrytenClient:
     ) -> str:
         """Return the KV bucket prefix used by Kryten-Robot for channel state.
 
-        NOTE: Current Kryten-Robot implementation uses `kryten_{channel}` (domain is
-        not included). This helper centralizes that convention so downstream
-        services don't duplicate or guess.
+        NOTE: Kryten-Robot uses `kryten_{channel}` with the original channel
+        name (case-sensitive, preserving hyphens). Domain is not included.
+        This helper centralizes that convention so downstream services don't
+        duplicate or guess.
         """
         _ = domain
-        return f"kryten_{channel.lower()}"
+        return f"kryten_{channel}"
 
     async def get_state_playlist_items(
         self,
