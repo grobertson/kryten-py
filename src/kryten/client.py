@@ -3011,6 +3011,229 @@ class KrytenClient:
         uid_str = str(uid).strip()
         return uid_str or None
 
+    async def get_state_motd(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+        timeout: float = 5.0,
+    ) -> str:
+        """Get current channel MOTD from Kryten-Robot state.
+
+        Args:
+            channel: Channel name
+            domain: Optional domain override
+            timeout: Request timeout in seconds
+
+        Returns:
+            MOTD HTML string (may be empty if not set)
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response format is invalid
+        """
+        request = {"service": "robot", "command": "state.motd"}
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get MOTD: {error}")
+        return response.get("data", {}).get("motd", "")
+
+    async def get_state_channel_css(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+        timeout: float = 5.0,
+    ) -> str:
+        """Get current channel CSS from Kryten-Robot state.
+
+        Args:
+            channel: Channel name
+            domain: Optional domain override
+            timeout: Request timeout in seconds
+
+        Returns:
+            CSS content string (may be empty if not set)
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response format is invalid
+        """
+        request = {"service": "robot", "command": "state.css"}
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get channel CSS: {error}")
+        return response.get("data", {}).get("css", "")
+
+    async def get_state_channel_js(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+        timeout: float = 5.0,
+    ) -> str:
+        """Get current channel JS from Kryten-Robot state.
+
+        Args:
+            channel: Channel name
+            domain: Optional domain override
+            timeout: Request timeout in seconds
+
+        Returns:
+            JS content string (may be empty if not set)
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response format is invalid
+        """
+        request = {"service": "robot", "command": "state.js"}
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get channel JS: {error}")
+        return response.get("data", {}).get("js", "")
+
+    async def get_state_channel_options(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+        timeout: float = 5.0,
+    ) -> dict[str, Any]:
+        """Get current channel options from Kryten-Robot state.
+
+        Args:
+            channel: Channel name
+            domain: Optional domain override
+            timeout: Request timeout in seconds
+
+        Returns:
+            Dictionary of channel options
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response format is invalid
+        """
+        request = {"service": "robot", "command": "state.options"}
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get channel options: {error}")
+        return response.get("data", {}).get("options", {})
+
+    async def get_state_channel_permissions(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+        timeout: float = 5.0,
+    ) -> dict[str, Any]:
+        """Get current channel permissions from Kryten-Robot state.
+
+        Args:
+            channel: Channel name
+            domain: Optional domain override
+            timeout: Request timeout in seconds
+
+        Returns:
+            Dictionary mapping permission names to rank levels
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response format is invalid
+        """
+        request = {"service": "robot", "command": "state.permissions"}
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get channel permissions: {error}")
+        return response.get("data", {}).get("permissions", {})
+
+    async def get_state_emotes(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+        timeout: float = 5.0,
+    ) -> list[dict[str, Any]]:
+        """Get current emote list from Kryten-Robot state (via request/reply).
+
+        Args:
+            channel: Channel name
+            domain: Optional domain override
+            timeout: Request timeout in seconds
+
+        Returns:
+            List of emote dictionaries
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response format is invalid
+        """
+        request = {"service": "robot", "command": "state.emotes"}
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get emotes: {error}")
+        return response.get("data", {}).get("emotes", [])
+
+    async def import_emotes(
+        self,
+        channel: str,
+        emotes: list[dict[str, str]],
+        *,
+        domain: str | None = None,
+    ) -> list[str]:
+        """Bulk import emotes to a channel.
+
+        Each emote dict should have 'name', 'image', and optionally 'source'.
+
+        Args:
+            channel: Channel name
+            emotes: List of emote dicts with keys: name, image, source (default "imgur")
+            domain: Optional domain override
+
+        Returns:
+            List of message IDs for each emote update command sent
+        """
+        message_ids = []
+        for emote in emotes:
+            name = emote["name"]
+            image = emote["image"]
+            source = emote.get("source", "imgur")
+            msg_id = await self.update_emote(channel, name, image, source, domain=domain)
+            message_ids.append(msg_id)
+        return message_ids
+
+    async def export_emotes(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+        timeout: float = 5.0,
+    ) -> list[dict[str, Any]]:
+        """Export all emotes from a channel.
+
+        Returns the current emote list from Kryten-Robot state.
+
+        Args:
+            channel: Channel name
+            domain: Optional domain override
+            timeout: Request timeout in seconds
+
+        Returns:
+            List of emote dictionaries (each with name, image, source fields)
+        """
+        return await self.get_state_emotes(channel, domain=domain, timeout=timeout)
+
     async def subscribe_request_reply(
         self,
         subject: str,
