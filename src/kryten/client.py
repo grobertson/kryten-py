@@ -714,30 +714,44 @@ class KrytenClient:
         position: str = "end",
         temp: bool = True,
         domain: str | None = None,
-    ) -> str:
+        timeout: float = 8.0,
+    ) -> dict[str, Any]:
         """Add media to playlist.
 
         Args:
             channel: Channel name
-            media_type: Media type (e.g., "yt", "vm", "dm")
-            media_id: Media ID (YouTube video ID, etc.)
+            media_type: Media type (e.g., "yt", "cm", "dm")
+            media_id: Media ID or full URL (for "cm" type, must be the manifest URL)
             position: "end" or "next"
             temp: Mark as temporary (default: True)
             domain: Optional domain
+            timeout: Seconds to wait for confirmation from the bot
 
         Returns:
-            Correlation ID
+            Response dict with "success" bool and optional "error" string
 
         Examples:
             >>> await client.add_media("lounge", "yt", "dQw4w9WgXcQ")
+            >>> await client.add_media("lounge", "cm", "https://example.com/manifest.json")
         """
-        return await self.__send_command(
-            service="robot",
-            type="addvideo",  # Updated to match RobotCommandHandler
-            body={"type": media_type, "id": media_id, "pos": position, "temp": temp},
-            domain=domain,
-            channel=channel,  # Added channel
-        )
+        if domain is None:
+            if self.config.channels:
+                domain = self.config.channels[0].domain
+            else:
+                domain = "cytu.be"
+
+        request = {
+            "command": "addvideo",
+            "service": "robot",
+            "args": {"type": media_type, "id": media_id, "pos": position, "temp": temp},
+            "meta": {
+                "source": self.config.service.name if self.config.service else "kryten-client",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "domain": domain,
+                "channel": channel,
+            },
+        }
+        return await self.nats_request("kryten.robot.command", request, timeout)
 
     async def delete_media(
         self,
