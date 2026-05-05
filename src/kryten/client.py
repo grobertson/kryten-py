@@ -1805,6 +1805,150 @@ class KrytenClient:
             domain=domain,
         )
 
+    # --- Synchronous request-reply wrappers (await CyTube event via bot) ---
+
+    async def get_banlist(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+        timeout: float = 8.0,
+    ) -> dict[str, Any]:
+        """Get the channel ban list synchronously.
+
+        Sends requestBanlist and waits for the bot to return the CyTube
+        banlist event data.
+
+        Args:
+            channel: Channel name
+            domain: Optional domain override
+            timeout: Timeout in seconds
+
+        Returns:
+            Dictionary with 'banlist' key containing ban entries
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response indicates failure
+        """
+        request = {"service": "robot", "command": "requestBanlist", "args": {}}
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get banlist: {error}")
+        return response.get("data", {})
+
+    async def get_channel_ranks(
+        self,
+        channel: str,
+        *,
+        domain: str | None = None,
+        timeout: float = 8.0,
+    ) -> dict[str, Any]:
+        """Get channel ranks synchronously.
+
+        Sends requestChannelRanks and waits for the bot to return the CyTube
+        channelRanks event data.
+
+        Args:
+            channel: Channel name
+            domain: Optional domain override
+            timeout: Timeout in seconds
+
+        Returns:
+            Dictionary with 'ranks' key containing rank entries
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response indicates failure
+        """
+        request = {"service": "robot", "command": "requestChannelRanks", "args": {}}
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get channel ranks: {error}")
+        return response.get("data", {})
+
+    async def get_chan_log(
+        self,
+        channel: str,
+        count: int = 100,
+        *,
+        domain: str | None = None,
+        timeout: float = 8.0,
+    ) -> dict[str, Any]:
+        """Get channel log entries synchronously.
+
+        Sends readChanLog and waits for the bot to return the CyTube
+        readChanLog event data.
+
+        Args:
+            channel: Channel name
+            count: Number of log entries to retrieve
+            domain: Optional domain override
+            timeout: Timeout in seconds
+
+        Returns:
+            Dictionary with 'log' key containing log entries
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response indicates failure
+        """
+        request = {
+            "service": "robot",
+            "command": "readChanLog",
+            "args": {"count": count},
+        }
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to get channel log: {error}")
+        return response.get("data", {})
+
+    async def get_library_search(
+        self,
+        channel: str,
+        query: str,
+        source: str = "library",
+        *,
+        domain: str | None = None,
+        timeout: float = 8.0,
+    ) -> dict[str, Any]:
+        """Search channel library synchronously.
+
+        Sends searchMedia and waits for the bot to return the CyTube
+        searchResults event data.
+
+        Args:
+            channel: Channel name
+            query: Search query
+            source: Search source ("library" or media provider)
+            domain: Optional domain override
+            timeout: Timeout in seconds
+
+        Returns:
+            Dictionary with 'results' key containing search results
+
+        Raises:
+            KrytenConnectionError: If not connected to NATS
+            TimeoutError: If no response within timeout
+            ValueError: If response indicates failure
+        """
+        request = {
+            "service": "robot",
+            "command": "searchLibrary",
+            "args": {"query": query, "source": source},
+        }
+        response = await self.nats_request("kryten.robot.command", request, timeout)
+        if not response.get("success"):
+            error = response.get("error", "Unknown error")
+            raise ValueError(f"Failed to search library: {error}")
+        return response.get("data", {})
+
     # Convenience Methods with Auto-Rank Checking
 
     async def _check_rank(
