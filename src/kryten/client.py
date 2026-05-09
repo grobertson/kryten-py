@@ -3176,27 +3176,25 @@ class KrytenClient:
         domain: str | None = None,
         timeout: float = 5.0,
     ) -> str:
-        """Get current channel MOTD from Kryten-Robot state.
+        """Get current channel MOTD from Kryten-Robot state KV.
 
         Args:
             channel: Channel name
             domain: Optional domain override
-            timeout: Request timeout in seconds
+            timeout: Unused, kept for API compatibility
 
         Returns:
             MOTD HTML string (may be empty if not set)
 
         Raises:
             KrytenConnectionError: If not connected to NATS
-            TimeoutError: If no response within timeout
-            ValueError: If response format is invalid
         """
-        request = {"service": "robot", "command": "state.motd"}
-        response = await self.nats_request("kryten.robot.command", request, timeout)
-        if not response.get("success"):
-            error = response.get("error", "Unknown error")
-            raise ValueError(f"Failed to get MOTD: {error}")
-        return response.get("data", {}).get("motd", "")
+        bucket = f"{self._state_bucket_prefix(channel, domain=domain)}_state"
+        try:
+            value = await self.kv_get(bucket, "motd", default="")
+            return value.decode() if isinstance(value, bytes) else str(value)
+        except Exception:
+            return ""
 
     async def get_state_channel_css(
         self,
@@ -3205,27 +3203,25 @@ class KrytenClient:
         domain: str | None = None,
         timeout: float = 5.0,
     ) -> str:
-        """Get current channel CSS from Kryten-Robot state.
+        """Get current channel CSS from Kryten-Robot state KV.
 
         Args:
             channel: Channel name
             domain: Optional domain override
-            timeout: Request timeout in seconds
+            timeout: Unused, kept for API compatibility
 
         Returns:
             CSS content string (may be empty if not set)
 
         Raises:
             KrytenConnectionError: If not connected to NATS
-            TimeoutError: If no response within timeout
-            ValueError: If response format is invalid
         """
-        request = {"service": "robot", "command": "state.css"}
-        response = await self.nats_request("kryten.robot.command", request, timeout)
-        if not response.get("success"):
-            error = response.get("error", "Unknown error")
-            raise ValueError(f"Failed to get channel CSS: {error}")
-        return response.get("data", {}).get("css", "")
+        bucket = f"{self._state_bucket_prefix(channel, domain=domain)}_state"
+        try:
+            value = await self.kv_get(bucket, "css", default="")
+            return value.decode() if isinstance(value, bytes) else str(value)
+        except Exception:
+            return ""
 
     async def get_state_channel_js(
         self,
@@ -3234,27 +3230,25 @@ class KrytenClient:
         domain: str | None = None,
         timeout: float = 5.0,
     ) -> str:
-        """Get current channel JS from Kryten-Robot state.
+        """Get current channel JS from Kryten-Robot state KV.
 
         Args:
             channel: Channel name
             domain: Optional domain override
-            timeout: Request timeout in seconds
+            timeout: Unused, kept for API compatibility
 
         Returns:
             JS content string (may be empty if not set)
 
         Raises:
             KrytenConnectionError: If not connected to NATS
-            TimeoutError: If no response within timeout
-            ValueError: If response format is invalid
         """
-        request = {"service": "robot", "command": "state.js"}
-        response = await self.nats_request("kryten.robot.command", request, timeout)
-        if not response.get("success"):
-            error = response.get("error", "Unknown error")
-            raise ValueError(f"Failed to get channel JS: {error}")
-        return response.get("data", {}).get("js", "")
+        bucket = f"{self._state_bucket_prefix(channel, domain=domain)}_state"
+        try:
+            value = await self.kv_get(bucket, "js", default="")
+            return value.decode() if isinstance(value, bytes) else str(value)
+        except Exception:
+            return ""
 
     async def get_state_channel_options(
         self,
