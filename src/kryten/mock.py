@@ -70,6 +70,9 @@ class MockKrytenClient:
         # key: (bucket_name, key)
         self._kv: dict[tuple[str, str], Any] = {}
 
+        # Configurable economy responses for testing
+        self._economy_responses: dict[str, Any] = {}
+
     async def connect(self) -> None:
         """Mock connect (immediate success)."""
         self._connected = True
@@ -156,15 +159,19 @@ class MockKrytenClient:
         media_id: str,
         *,
         position: str = "end",
+        temp: bool = True,
         domain: str | None = None,
-    ) -> str:
-        """Mock add media command."""
-        return self._record_command(
+    ) -> dict:
+        """Mock add media command. Returns synthetic UID for testing."""
+        import random
+        uid = random.randint(1000, 9999)
+        self._record_command(
             channel,
             "queue",
-            {"type": media_type, "id": media_id, "pos": position},
+            {"type": media_type, "id": media_id, "pos": position, "temp": temp},
             domain,
         )
+        return {"success": True, "uid": uid}
 
     async def delete_media(
         self,
@@ -180,7 +187,7 @@ class MockKrytenClient:
         self,
         channel: str,
         uid: int,
-        position: int,
+        position: int | str,
         *,
         domain: str | None = None,
     ) -> str:
@@ -290,6 +297,26 @@ class MockKrytenClient:
     ) -> str:
         """Mock voteskip command."""
         return self._record_command(channel, "voteskip", {}, domain)
+
+    async def economy_request(
+        self,
+        channel: str,
+        command: str,
+        payload: dict[str, Any],
+        timeout: float = 5.0,
+    ) -> dict[str, Any]:
+        """Mock economy_request. Records the call; returns a configurable response.
+
+        To set up test responses, assign to mock._economy_responses:
+            mock._economy_responses["balance.get"] = {
+                "success": True,
+                "data": {"found": True, "balance": 2000, ...}
+            }
+        Falls back to {"success": True, "data": {}} for unknown commands.
+        """
+        _ = timeout
+        self._record_command(channel, f"economy.{command}", payload, None)
+        return self._economy_responses.get(command, {"success": True, "data": {}})
 
     def health(self) -> HealthStatus:
         """Get mock health status."""

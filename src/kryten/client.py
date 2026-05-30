@@ -728,7 +728,11 @@ class KrytenClient:
             timeout: Seconds to wait for confirmation from the bot
 
         Returns:
-            Response dict with "success" bool and optional "error" string
+            Response dict with keys:
+                - "success" (bool)
+                - "uid" (int | None): UID of the newly added item, or None if CyTube
+                  confirmation timed out
+                - "error" (str): present when success is False
 
         Examples:
             >>> await client.add_media("lounge", "yt", "dQw4w9WgXcQ")
@@ -782,11 +786,21 @@ class KrytenClient:
         self,
         channel: str,
         uid: int,
-        position: int,
+        position: int | str,
         *,
         domain: str | None = None,
     ) -> str:
-        """Move media to new position in playlist."""
+        """Move media to new position in playlist.
+
+        Args:
+            channel: Channel name.
+            uid: UID of item to move.
+            position: UID of item to place after (int), or "prepend" / "append" (str).
+            domain: Optional domain.
+
+        Returns:
+            Correlation ID.
+        """
         return await self.__send_command(
             service="robot",
             channel=channel,
@@ -3493,6 +3507,39 @@ class KrytenClient:
             return cast(dict[str, Any], json.loads(response.data.decode("utf-8")))
         except asyncio.TimeoutError as e:
             raise TimeoutError(f"NATS request timeout on {subject}") from e
+
+    async def economy_request(
+        self,
+        channel: str,
+        command: str,
+        payload: dict[str, Any],
+        timeout: float = 5.0,
+    ) -> dict[str, Any]:
+        """Send a command to kryten-economy via NATS request-reply.
+
+        kryten-economy reads all fields flat from the top-level request dict.
+        This method merges the payload fields into the envelope alongside
+        'command' and 'channel' — do NOT nest payload under a 'payload' key.
+
+        Args:
+            channel: Economy channel (e.g. "Q_A").
+            command: Economy command name (e.g. "balance.get").
+            payload: Additional fields for the command (e.g. {"username": "alice"}).
+            timeout: Timeout in seconds.
+
+        Returns:
+            Raw NATS response dict: {"service", "command", "success": bool, "data": {...}}
+            or {"service", "command", "success": false, "error": "..."}.
+
+        Example:
+            >>> result = await client.economy_request(
+            ...     "Q_A", "balance.get", {"username": "alice"}
+            ... )
+            >>> if result.get("success"):
+            ...     balance = result["data"]["balance"]
+        """
+        envelope: dict[str, Any] = {"command": command, "channel": channel, **payload}
+        return await self.nats_request("kryten.economy.command", envelope, timeout)
 
     async def get_channels(self, timeout: float = 5.0) -> list[dict[str, Any]]:
         """Discover available channels from connected Kryten-Robot instances.
