@@ -2,7 +2,6 @@
 
 from kryten.mock import MockKrytenClient
 
-
 _CONFIG = {
     "nats": {"servers": ["nats://localhost:4222"]},
     "channels": [{"domain": "cytu.be", "channel": "lounge"}],

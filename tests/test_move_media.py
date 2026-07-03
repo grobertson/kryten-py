@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock
 
 from kryten.client import KrytenClient
 
-
 _CONFIG = {
     "nats": {"servers": ["nats://localhost:4222"]},
     "channels": [{"domain": "cytu.be", "channel": "lounge"}],

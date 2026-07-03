@@ -1,6 +1,5 @@
 """Tests for economy_request method (Gap 8)."""
 
-import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock
 
@@ -9,7 +8,6 @@ import pytest
 from kryten.client import KrytenClient
 from kryten.exceptions import KrytenConnectionError
 from kryten.mock import MockKrytenClient
-
 
 _CONFIG = {
     "nats": {"servers": ["nats://localhost:4222"]},
