@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import random
 import time
 import uuid
 from collections import defaultdict
@@ -116,6 +117,10 @@ class KrytenClient:
 
         # Lifecycle events - will be initialized on connect if service config provided
         self._lifecycle: LifecycleEventPublisher | None = None
+
+        # Outbound chat/PM rate limiting
+        self._chat_lock = asyncio.Lock()
+        self._next_chat_allowed: float = 0.0
 
     async def connect(self) -> None:
         """Establish NATS connection and subscribe to configured channels.
@@ -558,6 +563,19 @@ class KrytenClient:
 
     # Command Publishing - Chat
 
+    async def _throttle_chat(self) -> None:
+        """Enforce minimum delay with jitter between outbound chat/PM messages."""
+        async with self._chat_lock:
+            now = time.monotonic()
+            wait = max(0.0, self._next_chat_allowed - now)
+            if wait > 0:
+                await asyncio.sleep(wait)
+            self._next_chat_allowed = (
+                time.monotonic()
+                + self.config.chat_min_delay
+                + random.uniform(0.0, self.config.chat_jitter)
+            )
+
     async def send_command(
         self,
         service: str,
@@ -682,6 +700,7 @@ class KrytenClient:
         Examples:
             >>> await client.send_chat("lounge", "Hello!")
         """
+        await self._throttle_chat()
         return await self.__send_command(
             service="robot", type="say", body={"message": message}, domain=domain, channel=channel
         )
@@ -695,6 +714,7 @@ class KrytenClient:
         domain: str | None = None,
     ) -> str:
         """Send private message to user."""
+        await self._throttle_chat()
         return await self.__send_command(
             service="robot",
             type="pm",

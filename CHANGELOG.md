@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-07-03
+
+### Added
+- **Rate limiting**: `send_chat()` and `send_pm()` now enforce a minimum delay with random
+  jitter between outbound messages to avoid flooding CyTube chat.
+  - Default: 1.0 s minimum delay + up to 0.5 s random jitter per message.
+  - Configurable via `KrytenConfig.chat_min_delay` and `KrytenConfig.chat_jitter` (both `float`, `ge=0`).
+  - Implemented using an `asyncio.Lock`-serialised queue so concurrent coroutines are
+    safely spaced out rather than batched at the same timestamp.
+  - `MockKrytenClient` is unaffected (no delay in tests).
+
 ## [0.11.5] - 2025-12-31
 
 ### Fixed

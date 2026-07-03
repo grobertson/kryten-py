@@ -176,6 +176,16 @@ class KrytenConfig(BaseModel):
     handler_timeout: float = Field(30.0, description="Max handler execution time", ge=1.0)
     max_concurrent_handlers: int = Field(1000, description="Max concurrent handlers", ge=1)
     log_level: str = Field("INFO", description="Logging level")
+    chat_min_delay: float = Field(
+        1.0,
+        description="Minimum delay between outbound chat/PM messages in seconds",
+        ge=0.0,
+    )
+    chat_jitter: float = Field(
+        0.5,
+        description="Maximum random jitter added to chat/PM delay in seconds",
+        ge=0.0,
+    )
 
     @field_validator("channels")
     @classmethod
