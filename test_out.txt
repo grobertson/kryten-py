@@ -1,0 +1,58 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.11, pytest-7.4.4, pluggy-1.6.0 -- D:\Devel\Kryten-Ecosystem\kryten-py\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Devel\Kryten-Ecosystem\kryten-py
+configfile: pyproject.toml
+plugins: asyncio-0.21.2, cov-4.1.0, mock-3.15.1
+asyncio: mode=Mode.AUTO
+collecting ... collected 13 items
+
+tests/test_move_media.py::test_move_media_int_position PASSED            [  7%]
+tests/test_move_media.py::test_move_media_string_prepend PASSED          [ 15%]
+tests/test_move_media.py::test_move_media_string_append PASSED           [ 23%]
+tests/test_economy_request.py::test_economy_request_envelope PASSED      [ 30%]
+tests/test_economy_request.py::test_economy_request_timeout_forwarded PASSED [ 38%]
+tests/test_economy_request.py::test_economy_request_not_connected PASSED [ 46%]
+tests/test_economy_request.py::test_mock_economy_request_default PASSED  [ 53%]
+tests/test_economy_request.py::test_mock_economy_request_preset PASSED   [ 61%]
+tests/test_mock_add_media.py::test_mock_add_media_returns_dict PASSED    [ 69%]
+tests/test_mock_add_media.py::test_mock_add_media_success_true PASSED    [ 76%]
+tests/test_mock_add_media.py::test_mock_add_media_uid_is_int PASSED      [ 84%]
+tests/test_mock_add_media.py::test_mock_add_media_records_command FAILED [ 92%]
+tests/test_mock_add_media.py::test_mock_add_media_temp_param PASSED      [100%]
+
+================================== FAILURES ===================================
+_____________________ test_mock_add_media_records_command _____________________
+
+    async def test_mock_add_media_records_command():
+        """The call must still be recorded for test introspection."""
+        async with _make_mock() as mock:
+            await mock.add_media("lounge", "yt", "dQw4w9WgXcQ")
+            commands = mock.get_published_commands()
+        assert len(commands) == 1
+>       assert commands[0]["command"] == "queue"
+E       KeyError: 'command'
+
+tests\test_mock_add_media.py:43: KeyError
+
+---------- coverage: platform win32, python 3.12.11-final-0 ----------
+Name                             Stmts   Miss  Cover   Missing
+--------------------------------------------------------------
+src\kryten\__init__.py              15      2    87%   28-29
+src\kryten\client.py               893    713    20%   83-86, 127-198, 206-250, 264-266, 287-289, 300, 324-329, 333-334, 338, 370-378, 386-409, 413-427, 468-477, 485-491, 523-557, 587, 614, 621, 656-659, 685, 698, 741-758, 777, 820, 835, 850, 867, 884, 899, 915, 934-937, 954-957, 972, 1006, 1038, 1072, 1102, 1132, 1164, 1196, 1228, 1273, 1314, 1348, 1378, 1420, 1469, 1506, 1546, 1581, 1609, 1646, 1675, 1704, 1734, 1765, 1798, 1828, 1863-1868, 1895-1900, 1929-1938, 1969-1978, 2006-2016, 2052-2071, 2101-2120, 2154-2173, 2207-2226, 2266-2287, 2316-2335, 2345-2357, 2373, 2378, 2392-2405, 2409-2473, 2487-2639, 2643-2658, 2669-2692, 2696, 2700, 2704-2705, 2737-2770, 2797-2830, 2854-2887, 2924-2951, 2970-2976, 3006-3012, 3037-3044, 3059-3066, 3078-3085, 3099-3106, 3121-3128, 3145-3146, 3155-3157, 3166-3168, 3177-3184, 3206-3211, 3233-3238, 3260-3265, 3289-3294, 3318-3323, 3347-3352, 3373-3380, 3401, 3433-3469, 3508-3509, 3569-3582, 3611-3624, 3674-3687, 3717-3730, 3770-3783, 3815-3828, 3867-3883, 3927-3948
+src\kryten\config.py                97     27    72%   53, 76, 140, 185, 205-213, 233-249, 261-267
+src\kryten\exceptions.py             7      0   100%
+src\kryten\health.py                19      0   100%
+src\kryten\kv_store.py              90     77    14%   40-54, 91-109, 135-154, 176-195, 212-220, 237-243, 264-272
+src\kryten\lifecycle_events.py     195    166    15%   83-107, 117, 126, 134, 138-167, 171-201, 205-214, 218-222, 231, 235-260, 264-280, 304-316, 324-333, 342-352, 363-372, 381-391, 403-414, 427-443
+src\kryten\metrics_server.py       114     90    21%   67-77, 81-92, 96-103, 107-113, 117-122, 126-154, 158-193, 268-270, 274-279, 283-288
+src\kryten\mock.py                 223    134    40%   55, 103-109, 113-115, 119, 130-132, 142, 153, 184, 195, 205, 214, 223, 234, 243, 252, 262, 273-276, 287-290, 299, 323, 339, 344-345, 353-354, 363-364, 373-374, 377, 380, 383-384, 389-390, 398-400, 408-410, 418-425, 430, 450, 468-498, 509-657
+src\kryten\models.py                53      1    98%   56
+src\kryten\subject_builder.py       62     35    44%   91, 114, 125, 156-173, 194, 222, 258-300
+--------------------------------------------------------------
+TOTAL                             1768   1245    30%
+Coverage HTML written to dir htmlcov
+
+=========================== short test summary info ===========================
+FAILED tests/test_mock_add_media.py::test_mock_add_media_records_command - Ke...
+======================== 1 failed, 12 passed in 3.23s =========================

@@ -64,6 +64,8 @@ class ChatMessageEvent(BaseModel):
         message: Chat message text
         timestamp: Message timestamp
         rank: User rank (0=guest, 1=member, etc.)
+        shadow: True if user is CyTube shadow-muted (message visible only to mods/bot).
+                Consumers should silently ignore shadow-muted messages.
         channel: Channel name
         domain: Domain name
         correlation_id: Trace ID
@@ -73,6 +75,10 @@ class ChatMessageEvent(BaseModel):
     message: str = Field(..., description="Chat message text")
     timestamp: datetime = Field(..., description="Message timestamp")
     rank: int = Field(..., description="User rank (0=guest, 1=member, etc.)")
+    shadow: bool = Field(
+        default=False,
+        description="True if user is shadow-muted; message should be silently ignored",
+    )
     channel: str = Field(..., description="Channel name")
     domain: str = Field(..., description="Domain name")
     correlation_id: str = Field(..., description="Trace ID")
