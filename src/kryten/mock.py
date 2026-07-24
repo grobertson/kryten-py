@@ -530,11 +530,16 @@ class MockKrytenClient:
                     else raw_event.timestamp
                 )
 
+                # CyTube shadow-mute flag lives in meta.shadow
+                meta = payload.get("meta", {})
+                shadow = bool(meta.get("shadow", False)) if isinstance(meta, dict) else False
+
                 return ChatMessageEvent(
                     username=username,
                     message=message,
                     timestamp=timestamp,
                     rank=rank,
+                    shadow=shadow,
                     channel=raw_event.channel,
                     domain=raw_event.domain,
                     correlation_id=raw_event.correlation_id,
@@ -557,11 +562,16 @@ class MockKrytenClient:
                     else raw_event.timestamp
                 )
 
+                # CyTube may set meta.shadow on PMs from shadow-muted users
+                meta = payload.get("meta", {})
+                shadow = bool(meta.get("shadow", False)) if isinstance(meta, dict) else False
+
                 return ChatMessageEvent(
                     username=username,
                     message=message,
                     timestamp=timestamp,
                     rank=rank,
+                    shadow=shadow,
                     channel=raw_event.channel,
                     domain=raw_event.domain,
                     correlation_id=raw_event.correlation_id,

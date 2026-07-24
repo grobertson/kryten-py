@@ -107,6 +107,71 @@ async def test_pm_conversion(mock_config):
         assert event.username == "charlie"
         assert event.message == "Secret!"
         assert event.rank == 3
+        assert event.shadow is False
+
+
+@pytest.mark.asyncio
+async def test_pm_shadow_extraction(mock_config):
+    """Test that meta.shadow is extracted from PM events."""
+    client = MockKrytenClient(mock_config)
+    received_events = []
+
+    @client.on("pm")
+    async def handler(event):
+        received_events.append(event)
+
+    async with client:
+        await client.simulate_event(
+            "pm",
+            {
+                "username": "shadowuser",
+                "msg": "You can't see me",
+                "rank": 1,
+                "time": 1234567890000,
+                "meta": {"shadow": True},
+            },
+        )
+
+        import asyncio
+
+        await asyncio.sleep(0.1)
+
+        assert len(received_events) == 1
+        event = received_events[0]
+        assert isinstance(event, ChatMessageEvent)
+        assert event.shadow is True
+
+
+@pytest.mark.asyncio
+async def test_chatmsg_shadow_extraction(mock_config):
+    """Test that meta.shadow is extracted from chatmsg events."""
+    client = MockKrytenClient(mock_config)
+    received_events = []
+
+    @client.on("chatmsg")
+    async def handler(event):
+        received_events.append(event)
+
+    async with client:
+        await client.simulate_event(
+            "chatmsg",
+            {
+                "username": "shadowuser",
+                "msg": "ghost message",
+                "rank": 1,
+                "time": 1234567890000,
+                "meta": {"shadow": True},
+            },
+        )
+
+        import asyncio
+
+        await asyncio.sleep(0.1)
+
+        assert len(received_events) == 1
+        event = received_events[0]
+        assert isinstance(event, ChatMessageEvent)
+        assert event.shadow is True
 
 
 @pytest.mark.asyncio

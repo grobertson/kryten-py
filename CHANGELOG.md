@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-07-24
+
+### Changed
+- **PM shadow-mute propagation**: `pm` events now also extract `meta.shadow` from the
+  raw CyTube payload (same as `chatmsg`). If CyTube sets `meta.shadow=True` on a PM from
+  a shadow-muted user, `ChatMessageEvent.shadow` will be `True` for that PM.
+  Consumers that already filter `event.shadow` in their PM handler will silently ignore
+  such messages with no code change required.
+
 ## [0.17.1] - 2026-07-22
 
 ### Added
