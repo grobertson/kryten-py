@@ -79,3 +79,7 @@ dmypy.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Runtime configs (local only; keep config.example.* tracked)
+config.json
+config.yaml
