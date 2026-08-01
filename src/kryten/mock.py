@@ -4,7 +4,7 @@ import asyncio
 import logging
 from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 
 from kryten.config import KrytenConfig
 from kryten.health import ChannelInfo, HealthStatus
@@ -317,7 +317,9 @@ class MockKrytenClient:
         """
         _ = timeout
         self._record_command(channel, f"economy.{command}", payload, None)
-        return self._economy_responses.get(command, {"success": True, "data": {}})
+        return cast(
+            dict[str, Any], self._economy_responses.get(command, {"success": True, "data": {}})
+        )
 
     def health(self) -> HealthStatus:
         """Get mock health status."""

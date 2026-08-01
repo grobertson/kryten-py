@@ -1885,7 +1885,7 @@ class KrytenClient:
         if not response.get("success"):
             error = response.get("error", "Unknown error")
             raise ValueError(f"Failed to get banlist: {error}")
-        return response.get("data", {})
+        return cast(dict[str, Any], response.get("data", {}))
 
     async def get_channel_ranks(
         self,
@@ -1917,7 +1917,7 @@ class KrytenClient:
         if not response.get("success"):
             error = response.get("error", "Unknown error")
             raise ValueError(f"Failed to get channel ranks: {error}")
-        return response.get("data", {})
+        return cast(dict[str, Any], response.get("data", {}))
 
     async def get_chan_log(
         self,
@@ -1955,7 +1955,7 @@ class KrytenClient:
         if not response.get("success"):
             error = response.get("error", "Unknown error")
             raise ValueError(f"Failed to get channel log: {error}")
-        return response.get("data", {})
+        return cast(dict[str, Any], response.get("data", {}))
 
     async def get_library_search(
         self,
@@ -1995,7 +1995,7 @@ class KrytenClient:
         if not response.get("success"):
             error = response.get("error", "Unknown error")
             raise ValueError(f"Failed to search library: {error}")
-        return response.get("data", {})
+        return cast(dict[str, Any], response.get("data", {}))
 
     # Convenience Methods with Auto-Rank Checking
 
@@ -3321,7 +3321,7 @@ class KrytenClient:
         if not response.get("success"):
             error = response.get("error", "Unknown error")
             raise ValueError(f"Failed to get channel options: {error}")
-        return response.get("data", {}).get("options", {})
+        return cast(dict[str, Any], response.get("data", {}).get("options", {}))
 
     async def get_state_channel_permissions(
         self,
@@ -3350,7 +3350,7 @@ class KrytenClient:
         if not response.get("success"):
             error = response.get("error", "Unknown error")
             raise ValueError(f"Failed to get channel permissions: {error}")
-        return response.get("data", {}).get("permissions", {})
+        return cast(dict[str, Any], response.get("data", {}).get("permissions", {}))
 
     async def get_state_emotes(
         self,
@@ -3379,7 +3379,7 @@ class KrytenClient:
         if not response.get("success"):
             error = response.get("error", "Unknown error")
             raise ValueError(f"Failed to get emotes: {error}")
-        return response.get("data", {}).get("emotes", [])
+        return cast(list[dict[str, Any]], response.get("data", {}).get("emotes", []))
 
     async def import_emotes(
         self,
