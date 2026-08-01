@@ -164,6 +164,7 @@ class MockKrytenClient:
     ) -> dict:
         """Mock add media command. Returns synthetic UID for testing."""
         import random
+
         uid = random.randint(1000, 9999)
         self._record_command(
             channel,

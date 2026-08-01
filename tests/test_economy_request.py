@@ -66,6 +66,7 @@ async def test_economy_request_not_connected():
 
 # Mock tests
 
+
 def _make_mock() -> MockKrytenClient:
     return MockKrytenClient(_CONFIG)
 
