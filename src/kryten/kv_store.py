@@ -10,6 +10,7 @@ from typing import Any
 
 from nats.aio.client import Client as NATSClient
 from nats.js import JetStreamContext, api
+from nats.js.errors import KeyNotFoundError
 
 
 async def get_kv_store(
@@ -148,6 +149,10 @@ async def kv_get(
 
         return value if value is not None else default
 
+    except KeyNotFoundError:
+        if logger:
+            logger.debug("Key not found in KV store: %s (returning default)", key)
+        return default
     except Exception as e:
         if logger:
             logger.error("Failed to get key %s: %s", key, e)

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.3] - 2026-08-04
+
+### Fixed
+
+- **`kv_get` logs ERROR for missing keys even when a default is provided** (`kv_store.py`).
+  The NATS `KeyNotFoundError` was caught by the blanket `except Exception` handler and
+  logged at `ERROR` level regardless of whether the caller supplied a `default`. A missing
+  key with a default is an expected outcome, not an error. Fix: `KeyNotFoundError` is now
+  caught before the generic handler and logged at `DEBUG` instead. Genuine unexpected
+  exceptions still log at `ERROR`.
+
 ## [0.17.2] - 2026-07-24
 
 ### Changed
