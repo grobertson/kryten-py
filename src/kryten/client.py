@@ -1344,7 +1344,6 @@ class KrytenClient:
         channel: str,
         name: str,
         image: str,
-        source: str = "imgur",
         *,
         domain: str | None = None,
     ) -> str:
@@ -1355,21 +1354,20 @@ class KrytenClient:
         Args:
             channel: Channel name
             name: Emote name (without colons, e.g. "Kappa")
-            image: Image URL or ID (depends on source)
-            source: Image source ("imgur", "url", etc.)
+            image: Direct image URL (gif/webp/png/jpg)
             domain: Optional domain override
 
         Returns:
             Message ID of the published command
 
         Example:
-            >>> await client.update_emote("lounge", "CustomEmote", "abc123", "imgur")
+            >>> await client.update_emote("lounge", "CustomEmote", "https://example.com/e.gif")
         """
         return await self.__send_command(
             service="robot",
             channel=channel,
             type="updateEmote",
-            body={"name": name, "image": image, "source": source},
+            body={"name": name, "image": image},
             domain=domain,
         )
 
@@ -2197,7 +2195,6 @@ class KrytenClient:
         channel: str,
         name: str,
         image: str,
-        source: str = "imgur",
         *,
         domain: str | None = None,
         check_rank: bool = True,
@@ -2210,8 +2207,7 @@ class KrytenClient:
         Args:
             channel: Channel name
             name: Emote name
-            image: Image URL or ID
-            source: Image source
+            image: Direct image URL (gif/webp/png/jpg)
             domain: Optional domain override
             check_rank: Whether to check rank before executing (default: True)
             timeout: Rank check timeout
@@ -2220,7 +2216,7 @@ class KrytenClient:
             Dictionary with success status, message_id or error
 
         Example:
-            >>> result = await client.safe_update_emote("lounge", "Kappa", "abc123")
+            >>> result = await client.safe_update_emote("lounge", "Kappa", "https://example.com/e.gif")
             >>> if result["success"]:
             ...     print("Emote added successfully")
         """
@@ -2240,7 +2236,7 @@ class KrytenClient:
                 return {"success": False, "error": f"Rank check failed: {e}", "rank": 0}
 
         try:
-            msg_id = await self.update_emote(channel, name, image, source, domain=domain)
+            msg_id = await self.update_emote(channel, name, image, domain=domain)
             return {"success": True, "message_id": msg_id}
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -3404,8 +3400,7 @@ class KrytenClient:
         for emote in emotes:
             name = emote["name"]
             image = emote["image"]
-            source = emote.get("source", "imgur")
-            msg_id = await self.update_emote(channel, name, image, source, domain=domain)
+            msg_id = await self.update_emote(channel, name, image, domain=domain)
             message_ids.append(msg_id)
         return message_ids
 

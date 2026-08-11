@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.4] - 2026-08-11
+
+### Changed
+
+- Removed `source` parameter from `update_emote`, `safe_update_emote`, and `import_emotes` — CyTube no longer uses the `source` field; emotes are now `{name, image}` only.
+
 ## [0.17.3] - 2026-08-04
 
 ### Fixed

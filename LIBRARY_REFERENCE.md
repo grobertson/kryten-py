@@ -127,7 +127,7 @@ All command methods are async and return a `str` correlation ID (message ID) unl
 - `set_channel_js(channel, js, *, domain=None)`: Set custom JS (max 20KB).
 - `set_options(channel, options, *, domain=None)`: Update channel settings (e.g., `voteskip_ratio`).
 - `set_permissions(channel, permissions, *, domain=None)`: Update rank requirements.
-- `update_emote(channel, name, image, source="imgur", *, domain=None)`: Add/edit emote.
+- `update_emote(channel, name, image, *, domain=None)`: Add/edit emote. `image` must be a direct URL (gif/webp/png/jpg).
 - `remove_emote(channel, name, *, domain=None)`: Delete emote.
 - `add_filter(channel, name, source, flags, replace, ..., *, domain=None)`: Add chat filter.
 - `update_filter(...)`: Update existing filter.
